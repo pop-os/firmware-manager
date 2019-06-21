@@ -1,0 +1,6 @@
+.vscode
+vendor
+vendor.tar.xz
+target
+ffi/examples/c/build/
+ffi/target

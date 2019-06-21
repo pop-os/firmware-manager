@@ -1,0 +1,7 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: firmware-manager
+Source: https://github.com/pop-os/firmware-manager
+
+Files: *
+Copyright: Copyright 2019 System76
+License: GPL-3
