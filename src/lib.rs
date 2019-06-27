@@ -73,14 +73,14 @@ impl FirmwareWidget {
             gtk::InfoBar::new();
             ..set_message_type(gtk::MessageType::Error);
             ..set_show_close_button(true);
-            ..set_revealed(false);
+            // ..set_revealed(false);
             ..set_valign(gtk::Align::Start);
             ..connect_close(|info_bar| {
-                info_bar.set_revealed(false);
+                // info_bar.set_revealed(false);
                 info_bar.set_visible(false);
             });
             ..connect_response(|info_bar, _| {
-                info_bar.set_revealed(false);
+                // info_bar.set_revealed(false);
                 info_bar.set_visible(false);
             });
         };
@@ -143,7 +143,7 @@ impl FirmwareWidget {
                         eprintln!("firmware widget error: {}", error_message);
 
                         info_bar.set_visible(true);
-                        info_bar.set_revealed(true);
+                        // info_bar.set_revealed(true);
                         info_bar_label.set_text(error_message.as_str().into());
                     }
                     WidgetEvent::Thelio(info, digest, changelog) => {

@@ -37,7 +37,7 @@ clean:
 	cargo clean
 
 distclean: clean
-	rm -rf .cargo vendor $(PKGCONFIG) $(PKGCONFIG).stub
+	rm -rf .cargo vendor vendor.tar.xz $(PKGCONFIG) $(PKGCONFIG).stub
 
 bin $(BINARY):
 	cargo build $(ARGS)
