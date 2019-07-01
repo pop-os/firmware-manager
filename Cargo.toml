@@ -15,3 +15,4 @@ glib = "0.7.1"
 system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware", branch = "firmware-client" }
 err-derive = "0.1.5"
 shrinkwraprs = "0.2.1"
+slotmap = "0.3.0"

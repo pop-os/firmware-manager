@@ -12,6 +12,8 @@ mod views;
 use self::{dialogs::*, views::*};
 
 use gtk::{self, prelude::*};
+use slotmap::DefaultKey as Entity;
+use slotmap::{SecondaryMap as SM, SlotMap, SparseSecondaryMap as SSM};
 use std::{
     error::Error as ErrorTrait,
     process::Command,
@@ -19,7 +21,7 @@ use std::{
     thread,
 };
 use system76_firmware_daemon::{
-    Changelog, Client as System76Client, Digest, Error as System76Error, ThelioInfo,
+    Changelog, Client as System76Client, Digest, Error as System76Error, ThelioInfo, ThelioIoInfo,
 };
 
 #[derive(Debug, Error)]
@@ -36,8 +38,8 @@ impl From<System76Error> for Error {
 
 enum FirmwareEvent {
     Scan,
-    Thelio(Digest, Box<str>),
-    ThelioIo(u16, Digest, Box<str>),
+    Thelio(Entity, Digest, Box<str>),
+    ThelioIo(Entity, Digest, Box<str>),
     Quit,
 }
 
@@ -45,9 +47,10 @@ enum FirmwareEvent {
 enum WidgetEvent {
     Clear,
     Thelio(FirmwareInfo, Digest, Changelog),
-    ThelioIo(FirmwareInfo, Digest),
-    DeviceUpdated(u16, Box<str>),
-    Error(Error),
+    ThelioIo(FirmwareInfo, Option<Digest>),
+    ThelioIoUpdated(Box<str>),
+    DeviceUpdated(Entity, Box<str>),
+    Error(Option<Entity>, Error),
 }
 
 pub struct FirmwareWidget {
@@ -111,8 +114,11 @@ impl FirmwareWidget {
             let sender = sender.clone();
             let stack = stack.clone();
 
-            let mut system_widget: Option<(gtk::Button, gtk::Label)> = None;
-            let mut device_widgets: Vec<(gtk::Button, gtk::Label)> = Vec::new();
+            let mut entities: SlotMap<Entity, ()> = SlotMap::new();
+
+            let mut system_widget: Option<Entity> = None;
+            let mut device_widgets: SSM<Entity, DeviceWidget> = SSM::new();
+            let mut thelio_io_widgets: SM<Entity, ()> = SM::new();
 
             receiver.attach(None, move |event| {
                 let event = match event {
@@ -126,12 +132,19 @@ impl FirmwareWidget {
                         stack.set_visible_child(view_empty.as_ref());
                     }
                     WidgetEvent::DeviceUpdated(entity, latest) => {
-                        if let Some((ref button, ref label)) = device_widgets.get(entity as usize) {
-                            button.set_visible(false);
-                            label.set_text(latest.as_ref());
+                        if let Some(widget) = device_widgets.get(entity) {
+                            widget.stack.set_visible(false);
+                            widget.label.set_text(latest.as_ref());
                         }
                     }
-                    WidgetEvent::Error(why) => {
+                    WidgetEvent::ThelioIoUpdated(latest) => {
+                        for entity in thelio_io_widgets.keys() {
+                            let widget = &device_widgets[entity];
+                            widget.stack.set_visible(false);
+                            widget.label.set_text(latest.as_ref());
+                        }
+                    }
+                    WidgetEvent::Error(entity, why) => {
                         // Convert the error and its causes into a string.
                         let mut error_message = format!("{}", why);
                         let mut cause = why.source();
@@ -145,15 +158,23 @@ impl FirmwareWidget {
                         info_bar.set_visible(true);
                         // info_bar.set_revealed(true);
                         info_bar_label.set_text(error_message.as_str().into());
+
+                        if let Some(entity) = entity {
+                            let widget = &device_widgets[entity];
+                            widget.stack.set_visible_child(&widget.button);
+                        }
                     }
                     WidgetEvent::Thelio(info, digest, changelog) => {
-                        let (button, label) = view_devices.system(&info);
+                        let widget = view_devices.system(&info);
+                        let entity = entities.insert(());
 
                         if info.current == info.latest {
-                            button.set_visible(false);
+                            widget.stack.set_visible(false);
                         } else {
                             let sender = sender.clone();
-                            button.connect_clicked(move |_| {
+                            let stack = widget.stack.downgrade();
+                            let progress = widget.progress.downgrade();
+                            widget.button.connect_clicked(move |_| {
                                 let &FirmwareInfo { ref current, ref latest, .. } = &info;
                                 let log_entries = changelog
                                     .versions
@@ -166,8 +187,18 @@ impl FirmwareWidget {
 
                                 let expected: i32 = gtk::ResponseType::Accept.into();
                                 if expected == dialog.run() {
-                                    let event =
-                                        FirmwareEvent::Thelio(digest.clone(), latest.clone());
+                                    // Exchange the button for a progress bar.
+                                    if let (Some(stack), Some(progress)) =
+                                        (stack.upgrade(), progress.upgrade())
+                                    {
+                                        stack.set_visible_child(&progress);
+                                    }
+
+                                    let event = FirmwareEvent::Thelio(
+                                        entity,
+                                        digest.clone(),
+                                        latest.clone(),
+                                    );
                                     let _ = sender.send(event);
                                 }
 
@@ -175,23 +206,52 @@ impl FirmwareWidget {
                             });
                         }
 
-                        system_widget = Some((button, label));
+                        device_widgets.insert(entity, widget);
+                        system_widget = Some(entity);
+
                         stack.set_visible_child(view_devices.as_ref());
                     }
                     WidgetEvent::ThelioIo(info, digest) => {
-                        let entity = device_widgets.len() as u16;
-                        let (button, label) = view_devices.device(&info);
+                        let widget = view_devices.device(&info);
+                        let requires_update = info.current != info.latest;
+                        let entity = entities.insert(());
 
-                        let sender = sender.clone();
-                        button.connect_clicked(move |_| {
-                            let _ = sender.send(FirmwareEvent::ThelioIo(
-                                entity,
-                                digest.clone(),
-                                info.latest.clone(),
-                            ));
-                        });
+                        // Only the first Thelio I/O device will have a connected button.
+                        if let Some(digest) = digest {
+                            let sender = sender.clone();
+                            let latest = info.latest;
+                            let stack = widget.stack.downgrade();
+                            let progress = widget.progress.downgrade();
+                            widget.button.connect_clicked(move |_| {
+                                // Exchange the button for a progress bar.
+                                if let (Some(stack), Some(progress)) =
+                                    (stack.upgrade(), progress.upgrade())
+                                {
+                                    stack.set_visible_child(&progress);
+                                }
 
-                        device_widgets.push((button, label));
+                                let _ = sender.send(FirmwareEvent::ThelioIo(
+                                    entity,
+                                    digest.clone(),
+                                    latest.clone(),
+                                ));
+                            });
+                        }
+
+                        widget.stack.set_visible(false);
+                        device_widgets.insert(entity, widget);
+                        thelio_io_widgets.insert(entity, ());
+
+                        // If any Thelio I/O device requires an update, then enable the
+                        // update button on the first Thelio I/O device widget.
+                        if requires_update {
+                            let entity = thelio_io_widgets
+                                .keys()
+                                .next()
+                                .expect("missing thelio I/O widgets");
+                            device_widgets[entity].stack.set_visible(true);
+                        }
+
                         stack.set_visible_child(view_devices.as_ref());
                     }
                 }
@@ -225,13 +285,14 @@ impl FirmwareWidget {
             while let Ok(event) = receiver.recv() {
                 match event {
                     FirmwareEvent::Scan => scan(client.as_ref(), &sender),
-                    FirmwareEvent::Thelio(digest, _latest) => {
+                    FirmwareEvent::Thelio(entity, digest, _latest) => {
                         match client.as_ref().map(|client| client.schedule(&digest)) {
                             Some(Ok(_)) => {
                                 let _ = Command::new("systemctl").arg("reboot").status();
                             }
                             Some(Err(why)) => {
-                                let _ = sender.send(Some(WidgetEvent::Error(why.into())));
+                                let _ =
+                                    sender.send(Some(WidgetEvent::Error(Some(entity), why.into())));
                             }
                             None => panic!("thelio event assigned to non-thelio button"),
                         }
@@ -240,8 +301,8 @@ impl FirmwareWidget {
                         eprintln!("updating thelio io");
                         let event =
                             match client.as_ref().map(|client| client.thelio_io_update(&digest)) {
-                                Some(Ok(_)) => WidgetEvent::DeviceUpdated(entity, latest),
-                                Some(Err(why)) => WidgetEvent::Error(why.into()),
+                                Some(Ok(_)) => WidgetEvent::ThelioIoUpdated(latest),
+                                Some(Err(why)) => WidgetEvent::Error(Some(entity), why.into()),
                                 None => panic!("thelio event assigned to non-thelio button"),
                             };
 
@@ -289,9 +350,9 @@ fn scan(client: Option<&System76Client>, sender: &glib::Sender<Option<WidgetEven
 
                     WidgetEvent::Thelio(fw, digest, changelog)
                 }
-                Err(why) => WidgetEvent::Error(why.into()),
+                Err(why) => WidgetEvent::Error(None, why.into()),
             },
-            Err(why) => WidgetEvent::Error(why.into()),
+            Err(why) => WidgetEvent::Error(None, why.into()),
         };
 
         let _ = sender.send(Some(event));
@@ -300,6 +361,8 @@ fn scan(client: Option<&System76Client>, sender: &glib::Sender<Option<WidgetEven
         let event = match client.thelio_io_list() {
             Ok(list) => match client.thelio_io_download() {
                 Ok(info) => {
+                    let ThelioIoInfo { digest, .. } = info;
+                    let digest = &mut Some(digest);
                     for (num, (_, revision)) in list.iter().enumerate() {
                         let fw = FirmwareInfo {
                             name: format!("Thelio I/O #{}", num).into(),
@@ -308,18 +371,18 @@ fn scan(client: Option<&System76Client>, sender: &glib::Sender<Option<WidgetEven
                             } else {
                                 revision.as_str()
                             }),
-                            latest: info.revision.clone(),
+                            latest: Box::from(revision.as_str()),
                         };
 
-                        let event = WidgetEvent::ThelioIo(fw, info.digest.clone());
+                        let event = WidgetEvent::ThelioIo(fw, digest.take());
                         let _ = sender.send(Some(event));
                     }
 
                     None
                 }
-                Err(why) => Some(WidgetEvent::Error(why.into())),
+                Err(why) => Some(WidgetEvent::Error(None, why.into())),
             },
-            Err(why) => Some(WidgetEvent::Error(why.into())),
+            Err(why) => Some(WidgetEvent::Error(None, why.into())),
         };
 
         if let Some(event) = event {

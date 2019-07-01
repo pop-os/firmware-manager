@@ -66,30 +66,27 @@ impl DevicesView {
         self.device_firmware.foreach(WidgetExt::destroy);
     }
 
-    pub fn device(&self, info: &FirmwareInfo) -> (gtk::Button, gtk::Label) {
+    pub fn device(&self, info: &FirmwareInfo) -> DeviceWidget {
         Self::append(&self.device_firmware, info)
     }
 
-    pub fn system(&self, info: &FirmwareInfo) -> (gtk::Button, gtk::Label) {
+    pub fn system(&self, info: &FirmwareInfo) -> DeviceWidget {
         Self::append(&self.system_firmware, info)
     }
 
-    fn append(
-        container: &impl gtk::ContainerExt,
-        info: &FirmwareInfo,
-    ) -> (gtk::Button, gtk::Label) {
+    fn append(container: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
         let device = cascade! {
             gtk::Label::new(info.name.as_ref());
             ..set_xalign(0.0);
         };
 
-        let version = cascade! {
+        let label = cascade! {
             gtk::Label::new(info.current.as_ref());
             ..set_xalign(0.0);
             ..get_style_context().add_class(&gtk::STYLE_CLASS_DIM_LABEL);
         };
 
-        let update = cascade! {
+        let button = cascade! {
             gtk::Button::new_with_label("Update");
             ..set_halign(gtk::Align::End);
             ..set_hexpand(true);
@@ -97,18 +94,40 @@ impl DevicesView {
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
 
+        let progress = cascade! {
+            gtk::ProgressBar::new();
+            ..pulse();
+            ..set_pulse_step(0.33);
+            ..show();
+        };
+
+        let stack = cascade! {
+            gtk::Stack::new();
+            ..add(&button);
+            ..add(&progress);
+            ..set_visible_child(&button);
+            ..show();
+        };
+
         container.add(&cascade! {
             grid: gtk::Grid::new();
             ..set_border_width(12);
             ..set_column_spacing(12);
             ..attach(&device, 0, 0, 1, 1);
-            ..attach(&version, 0, 1, 1, 1);
-            ..attach(&update, 1, 0, 1, 2);
+            ..attach(&label, 0, 1, 1, 1);
+            ..attach(&stack, 1, 0, 1, 2);
             ..show_all();
         });
 
-        (update, version)
+        DeviceWidget { button, label, progress, stack }
     }
+}
+
+pub struct DeviceWidget {
+    pub button: gtk::Button,
+    pub label: gtk::Label,
+    pub progress: gtk::ProgressBar,
+    pub stack: gtk::Stack,
 }
 #[derive(Debug)]
 pub struct FirmwareInfo {
