@@ -59,7 +59,7 @@ enum FirmwareEvent {
 #[derive(Debug)]
 enum WidgetEvent {
     Clear,
-    Fwupd(FwupdDevice, FwupdRelease),
+    Fwupd(FwupdDevice, Option<FwupdRelease>),
     Thelio(FirmwareInfo, Digest, Changelog),
     ThelioIo(FirmwareInfo, Option<Digest>),
     DeviceUpdated(Entity, Box<str>),
@@ -178,17 +178,18 @@ impl FirmwareWidget {
                     }
                     WidgetEvent::Fwupd(device, release) => {
                         let info = FirmwareInfo {
-                            name: [&device.name, " ", &device.vendor].concat().into(),
+                            name: [&device.vendor, " ", &device.name].concat().into(),
                             current: device.version.clone(),
-                            latest: release.version.clone(),
+                            latest: match release.as_ref() {
+                                Some(release) => release.version.clone(),
+                                None => device.version.clone(),
+                            },
                         };
 
-                        let widget = view_devices.system(&info);
+                        let widget = view_devices.device(&info);
                         let entity = entities.insert(());
 
-                        if info.current == info.latest {
-                            widget.stack.set_visible(false);
-                        } else {
+                        if let Some(release) = release {
                             let sender = sender.clone();
                             let stack = widget.stack.downgrade();
                             let progress = widget.progress.downgrade();
@@ -208,6 +209,8 @@ impl FirmwareWidget {
                                     release.clone(),
                                 ));
                             });
+                        } else {
+                            widget.stack.set_visible(false);
                         }
 
                         device_widgets.insert(entity, widget);
@@ -418,14 +421,16 @@ fn fwupd_scan(
     http_client: &reqwest::Client,
     sender: &glib::Sender<Option<WidgetEvent>>,
 ) {
-    if let Ok(remotes) = fwupd.remotes() {
-        for remote in remotes {
-            if let Err(why) = remote.update_metadata(fwupd, http_client) {
-                eprintln!("failed to update remote ({:?}): {}", remote.remote_id, why);
-            }
-        }
-    }
+    eprintln!("scanning fwupd");
+    // if let Ok(remotes) = fwupd.remotes() {
+    //     for remote in remotes {
+    //         if let Err(why) = remote.update_metadata(fwupd, http_client) {
+    //             eprintln!("failed to update remote ({:?}): {}", remote.remote_id, why);
+    //         }
+    //     }
+    // }
 
+    eprintln!("scanning devices");
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
         Err(why) => {
@@ -435,11 +440,13 @@ fn fwupd_scan(
     };
 
     for device in devices {
-        if device.is_updateable() && device.is_supported() {
+        if device.is_supported() {
             if let Ok(upgrades) = fwupd.upgrades(&device) {
                 if let Some(upgrade) = upgrades.into_iter().last() {
-                    let _ = sender.send(Some(WidgetEvent::Fwupd(device, upgrade)));
+                    let _ = sender.send(Some(WidgetEvent::Fwupd(device, Some(upgrade))));
                 }
+            } else {
+                let _ = sender.send(Some(WidgetEvent::Fwupd(device, None)));
             }
         }
     }
