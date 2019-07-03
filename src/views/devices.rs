@@ -129,6 +129,7 @@ pub struct DeviceWidget {
     pub progress: gtk::ProgressBar,
     pub stack: gtk::Stack,
 }
+
 #[derive(Debug)]
 pub struct FirmwareInfo {
     pub name: Box<str>,

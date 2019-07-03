@@ -11,13 +11,17 @@ mod views;
 
 use self::{dialogs::*, views::*};
 
+use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
 use gtk::{self, prelude::*};
 use slotmap::DefaultKey as Entity;
 use slotmap::{SecondaryMap as SM, SlotMap, SparseSecondaryMap as SSM};
 use std::{
     error::Error as ErrorTrait,
     process::Command,
-    sync::mpsc::{sync_channel, Receiver, SyncSender},
+    sync::{
+        mpsc::{sync_channel, Receiver, SyncSender},
+        Arc,
+    },
     thread,
 };
 use system76_firmware_daemon::{
@@ -26,8 +30,16 @@ use system76_firmware_daemon::{
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error(display = "error in fwupd client")]
+    Fwupd(#[error(cause)] fwupd_dbus::Error),
     #[error(display = "error in system76-firmware client")]
     System76(#[error(cause)] System76Error),
+}
+
+impl From<fwupd_dbus::Error> for Error {
+    fn from(error: fwupd_dbus::Error) -> Self {
+        Error::Fwupd(error)
+    }
 }
 
 impl From<System76Error> for Error {
@@ -38,6 +50,7 @@ impl From<System76Error> for Error {
 
 enum FirmwareEvent {
     Scan,
+    Fwupd(Entity, Arc<FwupdDevice>, Arc<FwupdRelease>),
     Thelio(Entity, Digest, Box<str>),
     ThelioIo(Entity, Digest, Box<str>),
     Quit,
@@ -46,9 +59,9 @@ enum FirmwareEvent {
 #[derive(Debug)]
 enum WidgetEvent {
     Clear,
+    Fwupd(FwupdDevice, FwupdRelease),
     Thelio(FirmwareInfo, Digest, Changelog),
     ThelioIo(FirmwareInfo, Option<Digest>),
-    ThelioIoUpdated(Box<str>),
     DeviceUpdated(Entity, Box<str>),
     Error(Option<Entity>, Error),
 }
@@ -115,10 +128,10 @@ impl FirmwareWidget {
             let stack = stack.clone();
 
             let mut entities: SlotMap<Entity, ()> = SlotMap::new();
+            let mut system_entity: Option<Entity> = None;
+            let mut thelio_io_entities: SM<Entity, ()> = SM::new();
 
-            let mut system_widget: Option<Entity> = None;
             let mut device_widgets: SSM<Entity, DeviceWidget> = SSM::new();
-            let mut thelio_io_widgets: SM<Entity, ()> = SM::new();
 
             receiver.attach(None, move |event| {
                 let event = match event {
@@ -132,14 +145,13 @@ impl FirmwareWidget {
                         stack.set_visible_child(view_empty.as_ref());
                     }
                     WidgetEvent::DeviceUpdated(entity, latest) => {
-                        if let Some(widget) = device_widgets.get(entity) {
-                            widget.stack.set_visible(false);
-                            widget.label.set_text(latest.as_ref());
-                        }
-                    }
-                    WidgetEvent::ThelioIoUpdated(latest) => {
-                        for entity in thelio_io_widgets.keys() {
-                            let widget = &device_widgets[entity];
+                        if thelio_io_entities.contains_key(entity) {
+                            for entity in thelio_io_entities.keys() {
+                                let widget = &device_widgets[entity];
+                                widget.stack.set_visible(false);
+                                widget.label.set_text(latest.as_ref());
+                            }
+                        } else if let Some(widget) = device_widgets.get(entity) {
                             widget.stack.set_visible(false);
                             widget.label.set_text(latest.as_ref());
                         }
@@ -164,9 +176,47 @@ impl FirmwareWidget {
                             widget.stack.set_visible_child(&widget.button);
                         }
                     }
+                    WidgetEvent::Fwupd(device, release) => {
+                        let info = FirmwareInfo {
+                            name: [&device.name, " ", &device.vendor].concat().into(),
+                            current: device.version.clone(),
+                            latest: release.version.clone(),
+                        };
+
+                        let widget = view_devices.system(&info);
+                        let entity = entities.insert(());
+
+                        if info.current == info.latest {
+                            widget.stack.set_visible(false);
+                        } else {
+                            let sender = sender.clone();
+                            let stack = widget.stack.downgrade();
+                            let progress = widget.progress.downgrade();
+                            let device = Arc::new(device);
+                            let release = Arc::new(release);
+                            widget.button.connect_clicked(move |_| {
+                                // Exchange the button for a progress bar.
+                                if let (Some(stack), Some(progress)) =
+                                    (stack.upgrade(), progress.upgrade())
+                                {
+                                    stack.set_visible_child(&progress);
+                                }
+
+                                let _ = sender.send(FirmwareEvent::Fwupd(
+                                    entity,
+                                    device.clone(),
+                                    release.clone(),
+                                ));
+                            });
+                        }
+
+                        device_widgets.insert(entity, widget);
+                        stack.set_visible_child(view_devices.as_ref());
+                    }
                     WidgetEvent::Thelio(info, digest, changelog) => {
                         let widget = view_devices.system(&info);
                         let entity = entities.insert(());
+                        system_entity = Some(entity);
 
                         if info.current == info.latest {
                             widget.stack.set_visible(false);
@@ -207,8 +257,6 @@ impl FirmwareWidget {
                         }
 
                         device_widgets.insert(entity, widget);
-                        system_widget = Some(entity);
-
                         stack.set_visible_child(view_devices.as_ref());
                     }
                     WidgetEvent::ThelioIo(info, digest) => {
@@ -240,12 +288,12 @@ impl FirmwareWidget {
 
                         widget.stack.set_visible(false);
                         device_widgets.insert(entity, widget);
-                        thelio_io_widgets.insert(entity, ());
+                        thelio_io_entities.insert(entity, ());
 
                         // If any Thelio I/O device requires an update, then enable the
                         // update button on the first Thelio I/O device widget.
                         if requires_update {
-                            let entity = thelio_io_widgets
+                            let entity = thelio_io_entities
                                 .keys()
                                 .next()
                                 .expect("missing thelio I/O widgets");
@@ -274,19 +322,29 @@ impl FirmwareWidget {
     /// Manages all firmware client interactions from a background thread.
     fn background(receiver: Receiver<FirmwareEvent>, sender: glib::Sender<Option<WidgetEvent>>) {
         thread::spawn(move || {
-            let client = if system76_firmware_is_active() {
-                System76Client::new()
-                    .map_err(|why| eprintln!("firmware client error: {}", why))
-                    .ok()
-            } else {
-                None
-            };
+            let s76 = Self::get_client("system76", s76_firmware_is_active, System76Client::new);
+            let fwupd = Self::get_client("fwupd", fwupd_is_active, FwupdClient::new);
+            let http_client = &reqwest::Client::new();
 
             while let Ok(event) = receiver.recv() {
                 match event {
-                    FirmwareEvent::Scan => scan(client.as_ref(), &sender),
+                    FirmwareEvent::Scan => scan(s76.as_ref(), fwupd.as_ref(), http_client, &sender),
+                    FirmwareEvent::Fwupd(entity, device, release) => {
+                        let flags = fwupd_dbus::InstallFlags::empty();
+                        let event = match fwupd.as_ref().map(|fwupd| {
+                            fwupd.update_device_with_release(http_client, &device, &release, flags)
+                        }) {
+                            Some(Ok(_)) => {
+                                WidgetEvent::DeviceUpdated(entity, release.version.clone())
+                            }
+                            Some(Err(why)) => WidgetEvent::Error(Some(entity), why.into()),
+                            None => panic!("fwupd event assigned to non-fwupd button"),
+                        };
+
+                        let _ = sender.send(Some(event));
+                    }
                     FirmwareEvent::Thelio(entity, digest, _latest) => {
-                        match client.as_ref().map(|client| client.schedule(&digest)) {
+                        match s76.as_ref().map(|client| client.schedule(&digest)) {
                             Some(Ok(_)) => {
                                 let _ = Command::new("systemctl").arg("reboot").status();
                             }
@@ -300,13 +358,11 @@ impl FirmwareWidget {
                     FirmwareEvent::ThelioIo(entity, digest, latest) => {
                         eprintln!("updating thelio io");
                         let event =
-                            match client.as_ref().map(|client| client.thelio_io_update(&digest)) {
-                                Some(Ok(_)) => WidgetEvent::ThelioIoUpdated(latest),
+                            match s76.as_ref().map(|client| client.thelio_io_update(&digest)) {
+                                Some(Ok(_)) => WidgetEvent::DeviceUpdated(entity, latest),
                                 Some(Err(why)) => WidgetEvent::Error(Some(entity), why.into()),
                                 None => panic!("thelio event assigned to non-thelio button"),
                             };
-
-                        eprintln!("replying with {:?}", event);
 
                         let _ = sender.send(Some(event));
                     }
@@ -320,6 +376,18 @@ impl FirmwareWidget {
             eprintln!("stopping firmware client connection");
         });
     }
+
+    fn get_client<F, T, E>(name: &str, is_active: fn() -> bool, connect: F) -> Option<T>
+    where
+        F: FnOnce() -> Result<T, E>,
+        E: std::fmt::Display,
+    {
+        if is_active() {
+            connect().map_err(|why| eprintln!("{} client error: {}", name, why)).ok()
+        } else {
+            None
+        }
+    }
 }
 
 impl Drop for FirmwareWidget {
@@ -328,72 +396,119 @@ impl Drop for FirmwareWidget {
     }
 }
 
-fn scan(client: Option<&System76Client>, sender: &glib::Sender<Option<WidgetEvent>>) {
+fn scan(
+    s76_client: Option<&System76Client>,
+    fwupd_client: Option<&FwupdClient>,
+    http_client: &reqwest::Client,
+    sender: &glib::Sender<Option<WidgetEvent>>,
+) {
     let _ = sender.send(Some(WidgetEvent::Clear));
 
-    if let Some(ref client) = client {
-        // Thelio system firmware check.
-        let event = match client.bios() {
-            Ok(current) => match client.download() {
-                Ok(ThelioInfo { digest, changelog }) => {
-                    let fw = FirmwareInfo {
-                        name: current.model,
-                        current: current.version,
-                        latest: changelog
-                            .versions
-                            .iter()
-                            .last()
-                            .expect("empty changelog")
-                            .bios
-                            .clone(),
-                    };
+    if let Some(ref client) = s76_client {
+        s76_scan(client, sender);
+    }
 
-                    WidgetEvent::Thelio(fw, digest, changelog)
+    if let Some(client) = fwupd_client {
+        fwupd_scan(client, http_client, sender);
+    }
+}
+
+fn fwupd_scan(
+    fwupd: &FwupdClient,
+    http_client: &reqwest::Client,
+    sender: &glib::Sender<Option<WidgetEvent>>,
+) {
+    if let Ok(remotes) = fwupd.remotes() {
+        for remote in remotes {
+            if let Err(why) = remote.update_metadata(fwupd, http_client) {
+                eprintln!("failed to update remote ({:?}): {}", remote.remote_id, why);
+            }
+        }
+    }
+
+    let devices = match fwupd.devices() {
+        Ok(devices) => devices,
+        Err(why) => {
+            let _ = sender.send(Some(WidgetEvent::Error(None, why.into())));
+            return;
+        }
+    };
+
+    for device in devices {
+        if device.is_updateable() && device.is_supported() {
+            if let Ok(upgrades) = fwupd.upgrades(&device) {
+                if let Some(upgrade) = upgrades.into_iter().last() {
+                    let _ = sender.send(Some(WidgetEvent::Fwupd(device, upgrade)));
                 }
-                Err(why) => WidgetEvent::Error(None, why.into()),
-            },
-            Err(why) => WidgetEvent::Error(None, why.into()),
-        };
-
-        let _ = sender.send(Some(event));
-
-        // Thelio I/O system firmware check.
-        let event = match client.thelio_io_list() {
-            Ok(list) => match client.thelio_io_download() {
-                Ok(info) => {
-                    let ThelioIoInfo { digest, .. } = info;
-                    let digest = &mut Some(digest);
-                    for (num, (_, revision)) in list.iter().enumerate() {
-                        let fw = FirmwareInfo {
-                            name: format!("Thelio I/O #{}", num).into(),
-                            current: Box::from(if revision.is_empty() {
-                                "N/A"
-                            } else {
-                                revision.as_str()
-                            }),
-                            latest: Box::from(revision.as_str()),
-                        };
-
-                        let event = WidgetEvent::ThelioIo(fw, digest.take());
-                        let _ = sender.send(Some(event));
-                    }
-
-                    None
-                }
-                Err(why) => Some(WidgetEvent::Error(None, why.into())),
-            },
-            Err(why) => Some(WidgetEvent::Error(None, why.into())),
-        };
-
-        if let Some(event) = event {
-            let _ = sender.send(Some(event));
+            }
         }
     }
 }
 
-fn system76_firmware_is_active() -> bool {
+fn s76_scan(client: &System76Client, sender: &glib::Sender<Option<WidgetEvent>>) {
+    // Thelio system firmware check.
+    let event = match client.bios() {
+        Ok(current) => match client.download() {
+            Ok(ThelioInfo { digest, changelog }) => {
+                let fw = FirmwareInfo {
+                    name: current.model,
+                    current: current.version,
+                    latest: changelog.versions.iter().last().expect("empty changelog").bios.clone(),
+                };
+
+                WidgetEvent::Thelio(fw, digest, changelog)
+            }
+            Err(why) => WidgetEvent::Error(None, why.into()),
+        },
+        Err(why) => WidgetEvent::Error(None, why.into()),
+    };
+
+    let _ = sender.send(Some(event));
+
+    // Thelio I/O system firmware check.
+    let event = match client.thelio_io_list() {
+        Ok(list) => match client.thelio_io_download() {
+            Ok(info) => {
+                let ThelioIoInfo { digest, .. } = info;
+                let digest = &mut Some(digest);
+                for (num, (_, revision)) in list.iter().enumerate() {
+                    let fw = FirmwareInfo {
+                        name: format!("Thelio I/O #{}", num).into(),
+                        current: Box::from(if revision.is_empty() {
+                            "N/A"
+                        } else {
+                            revision.as_str()
+                        }),
+                        latest: Box::from(revision.as_str()),
+                    };
+
+                    let event = WidgetEvent::ThelioIo(fw, digest.take());
+                    let _ = sender.send(Some(event));
+                }
+
+                None
+            }
+            Err(why) => Some(WidgetEvent::Error(None, why.into())),
+        },
+        Err(why) => Some(WidgetEvent::Error(None, why.into())),
+    };
+
+    if let Some(event) = event {
+        let _ = sender.send(Some(event));
+    }
+}
+
+fn fwupd_is_active() -> bool {
+    systemd_service_is_active("fwupd")
+}
+
+fn s76_firmware_is_active() -> bool {
+    systemd_service_is_active("system76-firmware-daemon")
+}
+
+fn systemd_service_is_active(name: &str) -> bool {
     Command::new("systemctl")
-        .args(&["-q", "is-active", "system76-firmware-daemon"])
+        .args(&["-q", "is-active", name])
         .status()
         .map_err(|why| eprintln!("{}", why))
         .ok()
