@@ -18,3 +18,4 @@ shrinkwraprs = "0.2.1"
 slotmap = "0.3.0"
 system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware", branch = "firmware-client" }
 reqwest = "0.9.18"
+url = "1.7.2"
