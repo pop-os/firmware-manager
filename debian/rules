@@ -17,9 +17,6 @@ ifeq ($(VENDORED),1)
 endif
 
 override_dh_auto_build:
-ifeq ($(VENDORED),1)
-	tar pxf vendor.tar.xz
-endif
 	make all VENDORED=$(VENDORED)
 
 override_dh_auto_install:

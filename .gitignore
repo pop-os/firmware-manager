@@ -1,3 +1,4 @@
+.cargo/
 .vscode
 vendor
 vendor.tar.xz
