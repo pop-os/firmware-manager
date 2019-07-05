@@ -1889,10 +1889,9 @@ dependencies = [
 [[package]]
 name = "system76-firmware"
 version = "1.0.5"
-source = "git+https://github.com/pop-os/system76-firmware?branch=firmware-client#0cef5f82743958b9cff1c177fb65c6e19f474972"
+source = "git+https://github.com/pop-os/system76-firmware?branch=firmware-client#bc1f79034a73eafa58cbc3952511e090659af1fd"
 dependencies = [
  "buildchain 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "dbus 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "ecflash 0.1.0 (git+https://github.com/system76/ecflash.git?branch=stable)",
  "libc 0.2.58 (registry+https://github.com/rust-lang/crates.io-index)",
  "plain 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1908,7 +1907,7 @@ dependencies = [
 [[package]]
 name = "system76-firmware-daemon"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/system76-firmware?branch=firmware-client#0cef5f82743958b9cff1c177fb65c6e19f474972"
+source = "git+https://github.com/pop-os/system76-firmware?branch=firmware-client#bc1f79034a73eafa58cbc3952511e090659af1fd"
 dependencies = [
  "dbus 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "enum_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",

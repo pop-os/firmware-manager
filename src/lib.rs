@@ -26,7 +26,8 @@ use std::{
     thread,
 };
 use system76_firmware_daemon::{
-    Changelog, Client as System76Client, Digest, Error as System76Error, ThelioInfo, ThelioIoInfo,
+    Changelog, Client as System76Client, Digest, Error as System76Error,
+    SystemInfo as S76SystemInfo, ThelioIoInfo,
 };
 
 #[derive(Debug, Error)]
@@ -50,21 +51,21 @@ impl From<System76Error> for Error {
 }
 
 enum FirmwareEvent {
-    Scan,
     Fwupd(Entity, Arc<FwupdDevice>, Arc<FwupdRelease>),
-    Thelio(Entity, Digest, Box<str>),
-    ThelioIo(Entity, Digest, Box<str>),
     Quit,
+    S76System(Entity, Digest, Box<str>),
+    Scan,
+    ThelioIo(Entity, Digest, Box<str>),
 }
 
 #[derive(Debug)]
 enum WidgetEvent {
     Clear,
-    Fwupd(FwupdDevice, Option<Box<[FwupdRelease]>>),
-    Thelio(FirmwareInfo, Digest, Changelog),
-    ThelioIo(FirmwareInfo, Option<Digest>),
     DeviceUpdated(Entity, Box<str>),
     Error(Option<Entity>, Error),
+    Fwupd(FwupdDevice, Option<Box<[FwupdRelease]>>),
+    S76System(FirmwareInfo, Digest, Changelog),
+    ThelioIo(FirmwareInfo, Option<Digest>),
 }
 
 pub struct FirmwareWidget {
@@ -300,7 +301,7 @@ impl FirmwareWidget {
                         device_widgets.insert(entity, widget);
                         stack.set_visible_child(view_devices.as_ref());
                     }
-                    WidgetEvent::Thelio(info, digest, changelog) => {
+                    WidgetEvent::S76System(info, digest, changelog) => {
                         let widget = view_devices.system(&info);
                         let entity = entities.insert(true);
                         system_entity = Some(entity);
@@ -335,7 +336,7 @@ impl FirmwareWidget {
                                         let _ = tx_progress.send(ActivateEvent::Activate(progress));
                                     }
 
-                                    let event = FirmwareEvent::Thelio(
+                                    let event = FirmwareEvent::S76System(
                                         entity,
                                         digest.clone(),
                                         latest.clone(),
@@ -436,7 +437,7 @@ impl FirmwareWidget {
 
                         let _ = sender.send(Some(event));
                     }
-                    FirmwareEvent::Thelio(entity, digest, _latest) => {
+                    FirmwareEvent::S76System(entity, digest, _latest) => {
                         match s76.as_ref().map(|client| client.schedule(&digest)) {
                             Some(Ok(_)) => {
                                 reboot();
@@ -541,14 +542,14 @@ fn s76_scan(client: &System76Client, sender: &glib::Sender<Option<WidgetEvent>>)
     // Thelio system firmware check.
     let event = match client.bios() {
         Ok(current) => match client.download() {
-            Ok(ThelioInfo { digest, changelog }) => {
+            Ok(S76SystemInfo { digest, changelog }) => {
                 let fw = FirmwareInfo {
                     name: current.model,
                     current: current.version,
                     latest: changelog.versions.iter().last().expect("empty changelog").bios.clone(),
                 };
 
-                WidgetEvent::Thelio(fw, digest, changelog)
+                WidgetEvent::S76System(fw, digest, changelog)
             }
             Err(why) => WidgetEvent::Error(None, why.into()),
         },
