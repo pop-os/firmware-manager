@@ -4,6 +4,7 @@ extern crate cascade;
 use firmware_manager::FirmwareWidget;
 use gio::{prelude::*, ApplicationFlags};
 use gtk::{prelude::*, Application};
+use std::rc::Rc;
 
 pub const APP_ID: &str = "com.system76.FirmwareManager";
 
@@ -20,14 +21,27 @@ fn main() {
     });
 
     application.connect_startup(|app| {
-        let widget = FirmwareWidget::new();
+        let widget = Rc::new(FirmwareWidget::new());
         widget.scan();
 
+        let weak_widget = Rc::downgrade(&widget);
         let headerbar = cascade! {
             gtk::HeaderBar::new();
             ..set_title("System76 Firmware Manager");
             ..set_show_close_button(true);
             ..show();
+            ..pack_end(&cascade! {
+                gtk::Button::new_from_icon_name(
+                    "view-refresh-symbolic",
+                    gtk::IconSize::SmallToolbar
+                );
+                ..connect_clicked(move |_| {
+                    if let Some(widget) = weak_widget.upgrade() {
+                        widget.scan();
+                    }
+                });
+                ..show();
+            });
         };
 
         let _window = cascade! {
