@@ -36,6 +36,7 @@ fn main() {
             ..set_icon_name("firmware-manager");
             ..set_keep_above(true);
             ..set_property_window_position(gtk::WindowPosition::Center);
+            ..set_default_size(768, 576);
             ..add(widget.container());
             ..show();
             ..connect_delete_event(move |window, _| {
