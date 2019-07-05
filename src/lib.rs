@@ -16,10 +16,11 @@ use gtk::{self, prelude::*};
 use slotmap::DefaultKey as Entity;
 use slotmap::{SecondaryMap as SM, SlotMap, SparseSecondaryMap as SSM};
 use std::{
+    collections::HashSet,
     error::Error as ErrorTrait,
     process::Command,
     sync::{
-        mpsc::{sync_channel, Receiver, SyncSender},
+        mpsc::{channel, Receiver, Sender},
         Arc,
     },
     thread,
@@ -59,7 +60,7 @@ enum FirmwareEvent {
 #[derive(Debug)]
 enum WidgetEvent {
     Clear,
-    Fwupd(FwupdDevice, Option<FwupdRelease>),
+    Fwupd(FwupdDevice, Option<Box<[FwupdRelease]>>),
     Thelio(FirmwareInfo, Digest, Changelog),
     ThelioIo(FirmwareInfo, Option<Digest>),
     DeviceUpdated(Entity, Box<str>),
@@ -68,12 +69,12 @@ enum WidgetEvent {
 
 pub struct FirmwareWidget {
     container: gtk::Container,
-    sender: SyncSender<FirmwareEvent>,
+    sender: Sender<FirmwareEvent>,
 }
 
 impl FirmwareWidget {
     pub fn new() -> Self {
-        let (sender, rx) = sync_channel(0);
+        let (sender, rx) = channel();
         let (tx, receiver) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         Self::background(rx, tx);
 
@@ -127,11 +128,52 @@ impl FirmwareWidget {
             let sender = sender.clone();
             let stack = stack.clone();
 
-            let mut entities: SlotMap<Entity, ()> = SlotMap::new();
+            let mut entities: SlotMap<Entity, bool> = SlotMap::new();
             let mut system_entity: Option<Entity> = None;
             let mut thelio_io_entities: SM<Entity, ()> = SM::new();
-
             let mut device_widgets: SSM<Entity, DeviceWidget> = SSM::new();
+
+            /// Activates, or deactivates, the movement of progress bars.
+            /// TODO: As soon as glib::WeakRef supports Eq/Hash derives, use WeakRef instead.
+            enum ActivateEvent {
+                Activate(gtk::ProgressBar),
+                Deactivate(gtk::ProgressBar),
+                Clear,
+            }
+
+            let (tx_progress, rx_progress) = channel();
+
+            {
+                // Keeps the progress bars moving.
+                let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
+                let mut remove = Vec::new();
+                gtk::timeout_add(100, move || {
+                    while let Ok(event) = rx_progress.try_recv() {
+                        match event {
+                            ActivateEvent::Activate(widget) => {
+                                active_widgets.insert(widget);
+                            }
+                            ActivateEvent::Deactivate(widget) => {
+                                active_widgets.remove(&widget);
+                            }
+                            ActivateEvent::Clear => {
+                                active_widgets.clear();
+                                return gtk::Continue(true);
+                            }
+                        }
+                    }
+
+                    for widget in remove.drain(..) {
+                        active_widgets.remove(&widget);
+                    }
+
+                    for widget in &active_widgets {
+                        widget.pulse();
+                    }
+
+                    gtk::Continue(true)
+                });
+            }
 
             receiver.attach(None, move |event| {
                 let event = match event {
@@ -142,6 +184,11 @@ impl FirmwareWidget {
                 match event {
                     WidgetEvent::Clear => {
                         view_devices.clear();
+                        entities.clear();
+                        system_entity = None;
+
+                        let _ = tx_progress.send(ActivateEvent::Clear);
+
                         stack.set_visible_child(view_empty.as_ref());
                     }
                     WidgetEvent::DeviceUpdated(entity, latest) => {
@@ -150,10 +197,18 @@ impl FirmwareWidget {
                                 let widget = &device_widgets[entity];
                                 widget.stack.set_visible(false);
                                 widget.label.set_text(latest.as_ref());
+                                let _ = tx_progress
+                                    .send(ActivateEvent::Deactivate(widget.progress.clone()));
                             }
                         } else if let Some(widget) = device_widgets.get(entity) {
                             widget.stack.set_visible(false);
                             widget.label.set_text(latest.as_ref());
+                            let _ = tx_progress
+                                .send(ActivateEvent::Deactivate(widget.progress.clone()));
+
+                            if entities[entity] {
+                                reboot();
+                            }
                         }
                     }
                     WidgetEvent::Error(entity, why) => {
@@ -176,38 +231,67 @@ impl FirmwareWidget {
                             widget.stack.set_visible_child(&widget.button);
                         }
                     }
-                    WidgetEvent::Fwupd(device, release) => {
+                    WidgetEvent::Fwupd(device, releases) => {
                         let info = FirmwareInfo {
                             name: [&device.vendor, " ", &device.name].concat().into(),
                             current: device.version.clone(),
-                            latest: match release.as_ref() {
-                                Some(release) => release.version.clone(),
+                            latest: match releases.as_ref() {
+                                Some(releases) => releases[releases.len() - 1].version.clone(),
                                 None => device.version.clone(),
                             },
                         };
 
-                        let widget = view_devices.device(&info);
-                        let entity = entities.insert(());
+                        let entity = entities.insert(device.needs_reboot());
 
-                        if let Some(release) = release {
+                        let widget = if device.needs_reboot() && device.plugin.as_ref() == "Uefi" {
+                            system_entity = Some(entity);
+                            view_devices.system(&info)
+                        } else {
+                            view_devices.device(&info)
+                        };
+
+                        if let Some(releases) = releases {
                             let sender = sender.clone();
                             let stack = widget.stack.downgrade();
                             let progress = widget.progress.downgrade();
                             let device = Arc::new(device);
-                            let release = Arc::new(release);
+                            let release = Arc::new(releases[releases.len() - 1].clone());
+                            let tx_progress = tx_progress.clone();
                             widget.button.connect_clicked(move |_| {
-                                // Exchange the button for a progress bar.
-                                if let (Some(stack), Some(progress)) =
-                                    (stack.upgrade(), progress.upgrade())
-                                {
-                                    stack.set_visible_child(&progress);
-                                }
+                                let response = if device.needs_reboot() {
+                                    let &FirmwareInfo { ref latest, .. } = &info;
 
-                                let _ = sender.send(FirmwareEvent::Fwupd(
-                                    entity,
-                                    device.clone(),
-                                    release.clone(),
-                                ));
+                                    let log_entries = releases.iter().map(|release| {
+                                        (release.version.as_ref(), release.description.as_ref())
+                                    });
+
+                                    let dialog = FirmwareUpdateDialog::new(latest, log_entries);
+                                    dialog.show_all();
+
+                                    let value = dialog.run();
+                                    dialog.destroy();
+                                    value
+                                } else {
+                                    gtk::ResponseType::Accept.into()
+                                };
+
+                                eprintln!("received response");
+                                let expected: i32 = gtk::ResponseType::Accept.into();
+                                if expected == response {
+                                    // Exchange the button for a progress bar.
+                                    if let (Some(stack), Some(progress)) =
+                                        (stack.upgrade(), progress.upgrade())
+                                    {
+                                        stack.set_visible_child(&progress);
+                                        let _ = tx_progress.send(ActivateEvent::Activate(progress));
+                                    }
+
+                                    let _ = sender.send(FirmwareEvent::Fwupd(
+                                        entity,
+                                        device.clone(),
+                                        release.clone(),
+                                    ));
+                                }
                             });
                         } else {
                             widget.stack.set_visible(false);
@@ -218,7 +302,7 @@ impl FirmwareWidget {
                     }
                     WidgetEvent::Thelio(info, digest, changelog) => {
                         let widget = view_devices.system(&info);
-                        let entity = entities.insert(());
+                        let entity = entities.insert(true);
                         system_entity = Some(entity);
 
                         if info.current == info.latest {
@@ -227,13 +311,16 @@ impl FirmwareWidget {
                             let sender = sender.clone();
                             let stack = widget.stack.downgrade();
                             let progress = widget.progress.downgrade();
+                            let tx_progress = tx_progress.clone();
                             widget.button.connect_clicked(move |_| {
                                 let &FirmwareInfo { ref current, ref latest, .. } = &info;
                                 let log_entries = changelog
                                     .versions
                                     .iter()
                                     .skip_while(|version| version.bios.as_ref() != current.as_ref())
-                                    .map(|version| version.description.as_ref());
+                                    .map(|version| {
+                                        (version.bios.as_ref(), version.description.as_ref())
+                                    });
 
                                 let dialog = FirmwareUpdateDialog::new(latest, log_entries);
                                 dialog.show_all();
@@ -245,6 +332,7 @@ impl FirmwareWidget {
                                         (stack.upgrade(), progress.upgrade())
                                     {
                                         stack.set_visible_child(&progress);
+                                        let _ = tx_progress.send(ActivateEvent::Activate(progress));
                                     }
 
                                     let event = FirmwareEvent::Thelio(
@@ -265,7 +353,7 @@ impl FirmwareWidget {
                     WidgetEvent::ThelioIo(info, digest) => {
                         let widget = view_devices.device(&info);
                         let requires_update = info.current != info.latest;
-                        let entity = entities.insert(());
+                        let entity = entities.insert(false);
 
                         // Only the first Thelio I/O device will have a connected button.
                         if let Some(digest) = digest {
@@ -273,12 +361,14 @@ impl FirmwareWidget {
                             let latest = info.latest;
                             let stack = widget.stack.downgrade();
                             let progress = widget.progress.downgrade();
+                            let tx_progress = tx_progress.clone();
                             widget.button.connect_clicked(move |_| {
                                 // Exchange the button for a progress bar.
                                 if let (Some(stack), Some(progress)) =
                                     (stack.upgrade(), progress.upgrade())
                                 {
                                     stack.set_visible_child(&progress);
+                                    let _ = tx_progress.send(ActivateEvent::Activate(progress));
                                 }
 
                                 let _ = sender.send(FirmwareEvent::ThelioIo(
@@ -331,7 +421,7 @@ impl FirmwareWidget {
 
             while let Ok(event) = receiver.recv() {
                 match event {
-                    FirmwareEvent::Scan => scan(s76.as_ref(), fwupd.as_ref(), http_client, &sender),
+                    FirmwareEvent::Scan => scan(s76.as_ref(), fwupd.as_ref(), &sender),
                     FirmwareEvent::Fwupd(entity, device, release) => {
                         let flags = fwupd_dbus::InstallFlags::empty();
                         let event = match fwupd.as_ref().map(|fwupd| {
@@ -349,7 +439,7 @@ impl FirmwareWidget {
                     FirmwareEvent::Thelio(entity, digest, _latest) => {
                         match s76.as_ref().map(|client| client.schedule(&digest)) {
                             Some(Ok(_)) => {
-                                let _ = Command::new("systemctl").arg("reboot").status();
+                                reboot();
                             }
                             Some(Err(why)) => {
                                 let _ =
@@ -402,7 +492,6 @@ impl Drop for FirmwareWidget {
 fn scan(
     s76_client: Option<&System76Client>,
     fwupd_client: Option<&FwupdClient>,
-    http_client: &reqwest::Client,
     sender: &glib::Sender<Option<WidgetEvent>>,
 ) {
     let _ = sender.send(Some(WidgetEvent::Clear));
@@ -412,28 +501,16 @@ fn scan(
     }
 
     if let Some(client) = fwupd_client {
-        fwupd_scan(client, http_client, sender);
+        fwupd_scan(client, sender);
     }
 }
 
-fn fwupd_scan(
-    fwupd: &FwupdClient,
-    http_client: &reqwest::Client,
-    sender: &glib::Sender<Option<WidgetEvent>>,
-) {
-    eprintln!("scanning fwupd");
-    // if let Ok(remotes) = fwupd.remotes() {
-    //     for remote in remotes {
-    //         if let Err(why) = remote.update_metadata(fwupd, http_client) {
-    //             eprintln!("failed to update remote ({:?}): {}", remote.remote_id, why);
-    //         }
-    //     }
-    // }
-
-    eprintln!("scanning devices");
+fn fwupd_scan(fwupd: &FwupdClient, sender: &glib::Sender<Option<WidgetEvent>>) {
+    eprintln!("scanning fwupd devices");
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
         Err(why) => {
+            eprintln!("errored");
             let _ = sender.send(Some(WidgetEvent::Error(None, why.into())));
             return;
         }
@@ -442,9 +519,17 @@ fn fwupd_scan(
     for device in devices {
         if device.is_supported() {
             if let Ok(upgrades) = fwupd.upgrades(&device) {
-                if let Some(upgrade) = upgrades.into_iter().last() {
-                    let _ = sender.send(Some(WidgetEvent::Fwupd(device, Some(upgrade))));
-                }
+                let releases: Box<[FwupdRelease]> = if let Some(current) =
+                    upgrades.iter().position(|v| v.version == device.version)
+                {
+                    Box::from(Vec::from(&upgrades[current..]))
+                } else if let Some(upgrade) = upgrades.into_iter().last() {
+                    Box::from([upgrade])
+                } else {
+                    continue;
+                };
+
+                let _ = sender.send(Some(WidgetEvent::Fwupd(device, Some(releases))));
             } else {
                 let _ = sender.send(Some(WidgetEvent::Fwupd(device, None)));
             }
@@ -520,4 +605,11 @@ fn systemd_service_is_active(name: &str) -> bool {
         .map_err(|why| eprintln!("{}", why))
         .ok()
         .map_or(false, |status| status.success())
+}
+
+fn reboot() {
+    eprintln!("rebooting");
+    if let Err(why) = Command::new("systemctl").arg("reboot").status() {
+        eprintln!("failed to reboot: {}", why);
+    }
 }

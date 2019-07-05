@@ -4,39 +4,33 @@ use gtk::prelude::*;
 pub struct FirmwareUpdateDialog(gtk::Dialog);
 
 impl FirmwareUpdateDialog {
-    pub fn new<S: AsRef<str>, I: Iterator<Item = S>>(version: &str, changelog: I) -> Self {
-        let mut text_content =
-            ["Firmware version ", version.trim(), " is available. Fixes and features include:\n\n"]
-                .concat();
+    pub fn new<S: AsRef<str>, I: Iterator<Item = (S, S)>>(version: &str, changelog: I) -> Self {
+        let changelog_entries = &cascade! {
+            gtk::Box::new(gtk::Orientation::Vertical, 12);
+        };
 
-        {
-            let text_content = &mut text_content;
+        changelog.for_each(|(version, entry)| {
+            let markdown = html2runes::markdown::convert_string(entry.as_ref());
 
-            changelog.for_each(|entry| {
-                text_content.push_str("  * ");
-                text_content.push_str(entry.as_ref());
-                text_content.push_str("\n");
+            changelog_entries.add(&cascade! {
+                gtk::Box::new(gtk::Orientation::Vertical, 12);
+                ..add(&cascade! {
+                    gtk::Label::new(format!("<b>{}</b>", version.as_ref()).as_str());
+                    ..set_use_markup(true);
+                    ..set_xalign(0.0);
+                });
+                ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
+                ..add(&cascade! {
+                    gtk::Label::new(&*markdown);
+                    ..set_line_wrap(true);
+                    ..set_xalign(0.0);
+                });
             });
+        });
 
-            text_content
-                .push_str("\nIf you're on a laptop, <b>plug into power</b> before you begin");
-        }
-
-        let image = cascade! {
-            gtk::Image::new_from_icon_name(
-                "application-x-firmware",
-                gtk::IconSize::Dialog.into(),
-            );
-            ..set_valign(gtk::Align::Start);
-        };
-
-        let text = cascade! {
-            gtk::Label::new(text_content.as_str());
-            ..set_line_wrap(true);
-            ..set_use_markup(true);
-            ..set_xalign(0.0);
-            ..set_yalign(0.0);
-        };
+        let header_text =
+            ["Firmware version ", version.trim(), " is available. Fixes and features include:"]
+                .concat();
 
         let cancel = gtk::Button::new_with_label("Cancel".into());
 
@@ -53,6 +47,7 @@ impl FirmwareUpdateDialog {
             ..set_accept_focus(true);
             ..set_deletable(true);
             ..set_destroy_with_parent(true);
+            ..set_size_request(400, 300);
         };
 
         let headerbar = dialog
@@ -77,24 +72,54 @@ impl FirmwareUpdateDialog {
             ..set_orientation(gtk::Orientation::Horizontal);
             ..set_border_width(12);
             ..set_spacing(12);
-            ..add(&image);
-            ..add(&text);
+            ..add(&cascade! {
+                gtk::Image::new_from_icon_name("application-x-firmware", gtk::IconSize::Dialog.into());
+                ..set_valign(gtk::Align::Start);
+            });
+            ..add(&cascade! {
+                gtk::Box::new(gtk::Orientation::Vertical, 12);
+                ..add(&cascade! {
+                    gtk::Label::new(&*header_text);
+                    ..set_line_wrap(true);
+                    ..set_use_markup(true);
+                    ..set_xalign(0.0);
+                });
+                ..add(&cascade! {
+                    gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+                    ..set_hexpand(true);
+                    ..set_vexpand(true);
+                    ..add(changelog_entries);
+                });
+                ..add(&cascade! {
+                    gtk::Label::new("If you're on a laptop, <b>plug into power</b> before you begin.");
+                    ..set_use_markup(true);
+                    ..set_xalign(0.0);
+                });
+            });
         };
 
         {
-            let dialog = dialog.clone();
+            let dialog = dialog.downgrade();
             cancel.connect_clicked(move |_| {
-                dialog.response(gtk::ResponseType::Cancel);
+                if let Some(dialog) = dialog.upgrade() {
+                    dialog.response(gtk::ResponseType::Cancel);
+                }
             });
         }
 
         {
-            let dialog = dialog.clone();
+            let dialog = dialog.downgrade();
             reboot.connect_clicked(move |_| {
-                dialog.response(gtk::ResponseType::Accept);
+                if let Some(dialog) = dialog.upgrade() {
+                    dialog.response(gtk::ResponseType::Accept);
+                }
             });
         }
 
         Self(dialog)
     }
+
+    // pub fn run(&self) -> gtk::ResponseType {
+    //     self.set_window_size()
+    // }
 }
