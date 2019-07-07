@@ -8,3 +8,6 @@ description = "build tools used by this project"
 [[bin]]
 name = "desktop-entry"
 path = "src/desktop_entry.rs"
+
+[dependencies]
+freedesktop-desktop-entry = "0.1"

@@ -15,7 +15,7 @@ ifeq ($(DEBUG),0)
 endif
 
 VENDORED ?= 0
-ifeq ($(VENDORED),1)
+ifneq ($(VENDORED),0)
 	ARGS += --frozen
 endif
 
