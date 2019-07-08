@@ -11,7 +11,6 @@ mod views;
 
 use self::{dialogs::*, views::*};
 
-use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
 use gtk::{self, prelude::*};
 use slotmap::DefaultKey as Entity;
 use slotmap::{SecondaryMap as SM, SlotMap, SparseSecondaryMap as SSM};
@@ -25,6 +24,11 @@ use std::{
     },
     thread,
 };
+
+#[cfg(feature = "fwupd")]
+use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
+
+#[cfg(feature = "system76")]
 use system76_firmware_daemon::{
     Changelog, Client as System76Client, Digest, Error as System76Error,
     SystemInfo as S76SystemInfo, ThelioIoInfo,
@@ -32,18 +36,22 @@ use system76_firmware_daemon::{
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[cfg(feature = "fwupd")]
     #[error(display = "error in fwupd client")]
     Fwupd(#[error(cause)] fwupd_dbus::Error),
+    #[cfg(feature = "system76")]
     #[error(display = "error in system76-firmware client")]
     System76(#[error(cause)] System76Error),
 }
 
+#[cfg(feature = "fwupd")]
 impl From<fwupd_dbus::Error> for Error {
     fn from(error: fwupd_dbus::Error) -> Self {
         Error::Fwupd(error)
     }
 }
 
+#[cfg(feature = "system76")]
 impl From<System76Error> for Error {
     fn from(error: System76Error) -> Self {
         Error::System76(error)
@@ -51,10 +59,13 @@ impl From<System76Error> for Error {
 }
 
 enum FirmwareEvent {
+    #[cfg(feature = "fwupd")]
     Fwupd(Entity, Arc<FwupdDevice>, Arc<FwupdRelease>),
     Quit,
+    #[cfg(feature = "system76")]
     S76System(Entity, Digest, Box<str>),
     Scan,
+    #[cfg(feature = "system76")]
     ThelioIo(Entity, Digest, Box<str>),
 }
 
@@ -63,8 +74,11 @@ enum WidgetEvent {
     Clear,
     DeviceUpdated(Entity, Box<str>),
     Error(Option<Entity>, Error),
+    #[cfg(feature = "fwupd")]
     Fwupd(FwupdDevice, Option<Box<[FwupdRelease]>>),
+    #[cfg(feature = "system76")]
     S76System(FirmwareInfo, Digest, Changelog),
+    #[cfg(feature = "system76")]
     ThelioIo(FirmwareInfo, Option<Digest>),
 }
 
@@ -75,6 +89,9 @@ pub struct FirmwareWidget {
 
 impl FirmwareWidget {
     pub fn new() -> Self {
+        #[cfg(all(not(feature = "fwupd"), not(feature = "system76")))]
+        compile_error!("must enable one or more of [fwupd system76]");
+
         let (sender, rx) = channel();
         let (tx, receiver) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         Self::background(rx, tx);
@@ -131,8 +148,10 @@ impl FirmwareWidget {
 
             let mut entities: SlotMap<Entity, bool> = SlotMap::new();
             let mut system_entity: Option<Entity> = None;
-            let mut thelio_io_entities: SM<Entity, ()> = SM::new();
             let mut device_widgets: SSM<Entity, DeviceWidget> = SSM::new();
+
+            #[cfg(feature = "system76")]
+            let mut thelio_io_entities: SM<Entity, ()> = SM::new();
 
             /// Activates, or deactivates, the movement of progress bars.
             /// TODO: As soon as glib::WeakRef supports Eq/Hash derives, use WeakRef instead.
@@ -193,22 +212,33 @@ impl FirmwareWidget {
                         stack.set_visible_child(view_empty.as_ref());
                     }
                     WidgetEvent::DeviceUpdated(entity, latest) => {
-                        if thelio_io_entities.contains_key(entity) {
-                            for entity in thelio_io_entities.keys() {
-                                let widget = &device_widgets[entity];
+                        let mut device_continue = true;
+
+                        #[cfg(feature = "system76")]
+                        {
+                            if thelio_io_entities.contains_key(entity) {
+                                for entity in thelio_io_entities.keys() {
+                                    let widget = &device_widgets[entity];
+                                    widget.stack.set_visible(false);
+                                    widget.label.set_text(latest.as_ref());
+                                    let _ = tx_progress
+                                        .send(ActivateEvent::Deactivate(widget.progress.clone()));
+                                }
+
+                                device_continue = false;
+                            }
+                        }
+
+                        if device_continue {
+                            if let Some(widget) = device_widgets.get(entity) {
                                 widget.stack.set_visible(false);
                                 widget.label.set_text(latest.as_ref());
                                 let _ = tx_progress
                                     .send(ActivateEvent::Deactivate(widget.progress.clone()));
-                            }
-                        } else if let Some(widget) = device_widgets.get(entity) {
-                            widget.stack.set_visible(false);
-                            widget.label.set_text(latest.as_ref());
-                            let _ = tx_progress
-                                .send(ActivateEvent::Deactivate(widget.progress.clone()));
 
-                            if entities[entity] {
-                                reboot();
+                                if entities[entity] {
+                                    reboot();
+                                }
                             }
                         }
                     }
@@ -232,6 +262,7 @@ impl FirmwareWidget {
                             widget.stack.set_visible_child(&widget.button);
                         }
                     }
+                    #[cfg(feature = "fwupd")]
                     WidgetEvent::Fwupd(device, releases) => {
                         let info = FirmwareInfo {
                             name: [&device.vendor, " ", &device.name].concat().into(),
@@ -301,6 +332,7 @@ impl FirmwareWidget {
                         device_widgets.insert(entity, widget);
                         stack.set_visible_child(view_devices.as_ref());
                     }
+                    #[cfg(feature = "system76")]
                     WidgetEvent::S76System(info, digest, changelog) => {
                         let widget = view_devices.system(&info);
                         let entity = entities.insert(true);
@@ -351,6 +383,7 @@ impl FirmwareWidget {
                         device_widgets.insert(entity, widget);
                         stack.set_visible_child(view_devices.as_ref());
                     }
+                    #[cfg(feature = "system76")]
                     WidgetEvent::ThelioIo(info, digest) => {
                         let widget = view_devices.device(&info);
                         let requires_update = info.current != info.latest;
@@ -416,13 +449,35 @@ impl FirmwareWidget {
     /// Manages all firmware client interactions from a background thread.
     fn background(receiver: Receiver<FirmwareEvent>, sender: glib::Sender<Option<WidgetEvent>>) {
         thread::spawn(move || {
+            #[cfg(feature = "system76")]
             let s76 = Self::get_client("system76", s76_firmware_is_active, System76Client::new);
+            #[cfg(feature = "fwupd")]
             let fwupd = Self::get_client("fwupd", fwupd_is_active, FwupdClient::new);
+            #[cfg(feature = "fwupd")]
             let http_client = &reqwest::Client::new();
 
             while let Ok(event) = receiver.recv() {
                 match event {
-                    FirmwareEvent::Scan => scan(s76.as_ref(), fwupd.as_ref(), &sender),
+                    FirmwareEvent::Scan => {
+                        let sender = &sender;
+                        let _ = sender.send(Some(WidgetEvent::Clear));
+
+                        #[cfg(feature = "system76")]
+                        {
+                            if let Some(ref client) = s76 {
+                                s76_scan(client, sender);
+                            }
+                        }
+
+                        #[cfg(feature = "fwupd")]
+                        {
+                            if let Some(ref client) = fwupd {
+                                fwupd_scan(client, sender);
+                            }
+                        }
+
+                    },
+                    #[cfg(feature = "fwupd")]
                     FirmwareEvent::Fwupd(entity, device, release) => {
                         let flags = fwupd_dbus::InstallFlags::empty();
                         let event = match fwupd.as_ref().map(|fwupd| {
@@ -437,6 +492,7 @@ impl FirmwareWidget {
 
                         let _ = sender.send(Some(event));
                     }
+                    #[cfg(feature = "system76")]
                     FirmwareEvent::S76System(entity, digest, _latest) => {
                         match s76.as_ref().map(|client| client.schedule(&digest)) {
                             Some(Ok(_)) => {
@@ -449,6 +505,7 @@ impl FirmwareWidget {
                             None => panic!("thelio event assigned to non-thelio button"),
                         }
                     }
+                    #[cfg(feature = "system76")]
                     FirmwareEvent::ThelioIo(entity, digest, latest) => {
                         eprintln!("updating thelio io");
                         let event =
@@ -490,22 +547,7 @@ impl Drop for FirmwareWidget {
     }
 }
 
-fn scan(
-    s76_client: Option<&System76Client>,
-    fwupd_client: Option<&FwupdClient>,
-    sender: &glib::Sender<Option<WidgetEvent>>,
-) {
-    let _ = sender.send(Some(WidgetEvent::Clear));
-
-    if let Some(ref client) = s76_client {
-        s76_scan(client, sender);
-    }
-
-    if let Some(client) = fwupd_client {
-        fwupd_scan(client, sender);
-    }
-}
-
+#[cfg(feature = "fwupd")]
 fn fwupd_scan(fwupd: &FwupdClient, sender: &glib::Sender<Option<WidgetEvent>>) {
     eprintln!("scanning fwupd devices");
     let devices = match fwupd.devices() {
@@ -538,6 +580,7 @@ fn fwupd_scan(fwupd: &FwupdClient, sender: &glib::Sender<Option<WidgetEvent>>) {
     }
 }
 
+#[cfg(feature = "system76")]
 fn s76_scan(client: &System76Client, sender: &glib::Sender<Option<WidgetEvent>>) {
     // Thelio system firmware check.
     let event = match client.bios() {
@@ -591,10 +634,12 @@ fn s76_scan(client: &System76Client, sender: &glib::Sender<Option<WidgetEvent>>)
     }
 }
 
+#[cfg(feature = "fwupd")]
 fn fwupd_is_active() -> bool {
     systemd_service_is_active("fwupd")
 }
 
+#[cfg(feature = "system76")]
 fn s76_firmware_is_active() -> bool {
     systemd_service_is_active("system76-firmware-daemon")
 }

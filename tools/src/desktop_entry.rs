@@ -4,21 +4,31 @@ use freedesktop_desktop_entry::{Application, DesktopEntry, DesktopType};
 use std::{
     env,
     fs::File,
-    io::Write,
+    io::{self, Write},
     path::{Path, PathBuf},
 };
 
-const APPID: &str = "com.system76.FirmwareManager";
-
 fn main() {
+    let appid = env::var("APPID").expect("no appid env var");
     let prefix = env::var("prefix").expect("missing prefix env var");
-    let exec_path = Path::new(&prefix).join("bin").join(APPID);
+    write_desktop_entry(&prefix, &appid, &appid, desktop_entry)
+        .expect("failed to write desktop entry");
+}
+
+fn write_desktop_entry<F: FnOnce(&str) -> DesktopEntry>(
+    prefix: &str,
+    name: &str,
+    appid: &str,
+    func: F
+) -> io::Result<()> {
+    let exec_path = Path::new(&prefix).join("bin").join(name);
     let exec = exec_path.as_os_str().to_str().expect("prefix is not UTF-8");
+    let mut desktop = File::create(["target/", appid, ".desktop"].concat().as_str())?;
+    desktop.write_all(func(exec).to_string().as_bytes())
+}
 
-    let mut desktop = File::create(["target/", APPID, ".desktop"].concat().as_str())
-        .expect("failed to create desktop entry file");
-
-    let entry = DesktopEntry::new(
+fn desktop_entry(exec: &str) -> DesktopEntry {
+    DesktopEntry::new(
         "Firmware Manager",
         "firmware-manager",
         DesktopType::Application(
@@ -27,7 +37,5 @@ fn main() {
                 .startup_notify(),
         ),
     )
-    .comment("Mange system and device firmware");
-
-    desktop.write_all(entry.to_string().as_bytes());
+    .comment("Manage system and device firmware")
 }

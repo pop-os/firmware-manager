@@ -9,5 +9,9 @@ description = "build tools used by this project"
 name = "desktop-entry"
 path = "src/desktop_entry.rs"
 
+[[bin]]
+name = "pkgconfig"
+path = "src/pkgconfig.rs"
+
 [dependencies]
 freedesktop-desktop-entry = "0.1"

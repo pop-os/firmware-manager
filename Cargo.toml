@@ -7,16 +7,20 @@ edition = "2018"
 [workspace]
 members = [ "ffi", "tools" ]
 
+[features]
+fwupd = [ "fwupd-dbus" ]
+system76 = [ "system76-firmware-daemon" ]
+
 [dependencies]
 cascade = "0.1.3"
 err-derive = "0.1.5"
-fwupd-dbus = { git = "https://github.com/pop-os/fwupd-dbus" }
+fwupd-dbus = { git = "https://github.com/pop-os/fwupd-dbus", optional = true }
 gio = "0.6.0"
 glib = "0.7.1"
 gtk = {version = "0.6.0", features = [ "v3_22" ] }
 shrinkwraprs = "0.2.1"
 slotmap = "0.3.0"
-system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware", branch = "firmware-client" }
+system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware", branch = "firmware-client", optional = true }
 reqwest = "0.9.18"
 url = "1.7.2"
 html2runes = "1.0.1"

@@ -14,12 +14,12 @@ ifeq ($(DEBUG),0)
 	ARGS += --release
 endif
 
-VENDORED ?= 0
-ifneq ($(VENDORED),0)
+VENDOR ?= 0
+ifneq ($(VENDOR),0)
 	ARGS += --frozen
 endif
 
-APPID = com.system76.FirmwareManager
+export APPID = com.system76.FirmwareManager
 PACKAGE = firmware_manager
 DESKTOP = target/$(APPID).desktop
 BINARY = target/$(TARGET)/firmware-manager
@@ -44,7 +44,7 @@ distclean: clean
 ## Building the application
 
 bin $(BINARY): $(DESKTOP) vendor-check
-	cargo build $(ARGS)
+	cargo build $(ARGS) --features '$(features)'
 
 ## Builds the desktop entry in the target directory.
 
@@ -56,22 +56,20 @@ desktop $(DESKTOP): vendor-check
 ffi: $(LIBRARY) $(PKGCONFIG)
 
 $(LIBRARY): $(SOURCES) $(FFI_SOURCES) vendor-check
-	cargo build $(ARGS) -p firmware-manager-ffi
+	cargo build $(ARGS) -p firmware-manager-ffi --features '$(features)'
 
 ## Builds the pkg-config file necessary to locate the library.
 
 $(PKGCONFIG):
-	echo "libdir=$(libdir)" > "$@.partial"
-	echo "includedir=$(includedir)" >> "$@.partial"
-	cat "$(PKGCONFIG).stub" >> "$@.partial"
-	mv "$@.partial" "$@"
+	cargo run -p tools --bin pkgconfig $(ARGS) -- \
+		$(PACKAGE) $(libdir) $(includedir)
 
 ## Install commands
 
 install: install-bin install-ffi
 
 install-bin:
-	install -Dm0755 "$(BINARY)" "$(DESTDIR)$(bindir)/$(APPID)"
+	install -Dm0755 "$(BINARY)"  "$(DESTDIR)$(bindir)/$(APPID)"
 	install -Dm0644 "$(DESKTOP)" "$(DESTDIR)$(prefix)/share/applications/$(APPID).desktop"
 
 install-ffi:
@@ -101,6 +99,6 @@ vendor:
 	rm -rf vendor
 
 vendor-check:
-ifeq ($(VENDORED),1)
+ifeq ($(VENDOR),1)
 	test -e vendor || tar pxf vendor.tar.xz
 endif
