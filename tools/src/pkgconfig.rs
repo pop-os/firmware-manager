@@ -1,6 +1,10 @@
-use std::{env, fs::{self, File}, io::{self, Write}};
+use std::{
+    env,
+    fs::{self, File},
+    io::{self, Write},
+};
 
-const PKGCONFIG: &str =  r#"Name: {name}
+const PKGCONFIG: &str = r#"Name: {name}
 Description: {description}
 Version: {version}
 Cflags: -I${{includedir}}
@@ -18,11 +22,5 @@ fn main() -> io::Result<()> {
     let target = ["target/", &app, ".pc"].concat();
     let mut file = File::create(&target).expect("unable to create pkgconfig file");
 
-    writeln!(
-        &mut file,
-        "libdir={}\nincludedir={}\n{}",
-        libdir,
-        includedir,
-        PKGCONFIG
-    )
+    writeln!(&mut file, "libdir={}\nincludedir={}\n{}", libdir, includedir, PKGCONFIG)
 }

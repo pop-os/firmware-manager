@@ -19,7 +19,7 @@ fn write_desktop_entry<F: FnOnce(&str) -> DesktopEntry>(
     prefix: &str,
     name: &str,
     appid: &str,
-    func: F
+    func: F,
 ) -> io::Result<()> {
     let exec_path = Path::new(&prefix).join("bin").join(name);
     let exec = exec_path.as_os_str().to_str().expect("prefix is not UTF-8");

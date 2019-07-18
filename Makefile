@@ -19,21 +19,29 @@ ifneq ($(VENDOR),0)
 	ARGS += --frozen
 endif
 
+features ?= fwupd system76
+
 export APPID = com.system76.FirmwareManager
+
+GTKPROJ = gtk/Cargo.toml
+GTKFFIPROJ = gtk/ffi/Cargo.toml
+NOTPROJ = notify/Cargo.toml
 PACKAGE = firmware_manager
+
 DESKTOP = target/$(APPID).desktop
-BINARY = target/$(TARGET)/firmware-manager
+GTKBINARY = target/$(TARGET)/firmware-manager-gtk
 LIBRARY = target/$(TARGET)/lib$(PACKAGE).so
 PKGCONFIG = target/$(PACKAGE).pc
-HEADER = ffi/$(PACKAGE).h
+HEADER = gtk/ffi/$(PACKAGE).h
+
 VERSION = $(shell grep version Cargo.toml | head -1 | awk '{print $$3}' | tail -c +2 | head -c -2)
 
 SOURCES = $(shell find src -type f -name '*.rs') Cargo.toml Cargo.lock \
 	$(shell find tools/src -type f -name '*.rs') tools/Cargo.toml
-FFI_SOURCES = $(shell find ffi/src -type f -name '*.rs') \
-	ffi/Cargo.toml ffi/build.rs ffi/$(PACKAGE).h
+FFI_SOURCES = $(shell find gtk/ffi/src -type f -name '*.rs') \
+	gtk/ffi/Cargo.toml gtk/ffi/build.rs gtk/ffi/$(PACKAGE).h
 
-all: $(BINARY) $(LIBRARY) $(PKGCONFIG)
+all: $(GTKBINARY) $(LIBRARY) $(PKGCONFIG)
 
 clean:
 	cargo clean
@@ -41,10 +49,11 @@ clean:
 distclean: clean
 	rm -rf .cargo vendor vendor.tar.xz $(PKGCONFIG) $(PKGCONFIG).stub $(DESKTOP)
 
-## Building the application
+## Building the application(s)
 
-bin $(BINARY): $(DESKTOP) vendor-check
-	cargo build $(ARGS) --features '$(features)'
+bin $(GTKBINARY): $(DESKTOP) vendor-check
+	cargo build --manifest-path $(GTKPROJ) $(ARGS) --features '$(features)'
+	cargo build --manifest-path $(NOTPROJ) $(ARGS) --features '$(features)'
 
 ## Builds the desktop entry in the target directory.
 
@@ -56,7 +65,7 @@ desktop $(DESKTOP): vendor-check
 ffi: $(LIBRARY) $(PKGCONFIG)
 
 $(LIBRARY): $(SOURCES) $(FFI_SOURCES) vendor-check
-	cargo build $(ARGS) -p firmware-manager-ffi --features '$(features)'
+	cargo build --manifest-path $(GTKFFIPROJ) $(ARGS) --features '$(features)'
 
 ## Builds the pkg-config file necessary to locate the library.
 
@@ -69,7 +78,7 @@ $(PKGCONFIG):
 install: install-bin install-ffi
 
 install-bin:
-	install -Dm0755 "$(BINARY)"  "$(DESTDIR)$(bindir)/$(APPID)"
+	install -Dm0755 "$(GTKBINARY)"  "$(DESTDIR)$(bindir)/$(APPID)"
 	install -Dm0644 "$(DESKTOP)" "$(DESTDIR)$(prefix)/share/applications/$(APPID).desktop"
 
 install-ffi:

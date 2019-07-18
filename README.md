@@ -24,7 +24,7 @@ There are also two conditional features of the crate:
 - `system76`: enables support for the system76-firmware daemon
 - `fwupd`: enables support for the fwupd DBus daemon
 
-These must be passed into the makefile with the `features` flag. At least one feature must be specified, otherwise a compiler error will occur.
+If no feature is provided to `make`, the default is to enable both.
 
 ### Debug Binaries
 
@@ -53,7 +53,7 @@ This section provides details about the API and how to call it from Rust or C.
 The primary API, which the C API is based upon. An example of the Rust API in practice in a GTK application can be found [here](./src/main.rs).
 
 ```rust
-use system76_firmware_manager::FirmwareWidget;
+use firmware_manager_gtk::FirmwareWidget;
 
 // Create a new firmware widget
 //

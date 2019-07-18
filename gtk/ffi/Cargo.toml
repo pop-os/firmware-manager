@@ -1,0 +1,31 @@
+[package]
+name = "firmware-manager-gtk-ffi"
+version = "0.1.0"
+authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
+edition = "2018"
+
+[features]
+system76 = []
+fwupd = []
+
+[build-dependencies]
+cdylib-link-lines = "0.1"
+
+[dependencies]
+firmware-manager-gtk = { path = "../" }
+glib = "0.7.1"
+gtk-sys = "0.8.0"
+gtk = "0.6.0"
+
+[target.'cfg(all(not(feature = "fwupd"), feature = "system76"))'.dependencies]
+firmware-manager-gtk = { path = "../", features = [ "system76" ] }
+
+[target.'cfg(all(feature = "fwupd", not(feature = "system76")))'.dependencies]
+firmware-manager-gtk = { path = "../", features = [ "fwupd" ] }
+
+[target.'cfg(all(feature = "fwupd", feature = "system76"))'.dependencies]
+firmware-manager-gtk = { path = "../", features = [ "fwupd", "system76" ] }
+
+[lib]
+name = "firmware_manager"
+crate-type = [ "cdylib" ]

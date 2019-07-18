@@ -1,4 +1,5 @@
 use crate::traits::DynamicGtkResize;
+use firmware_manager::FirmwareInfo;
 use gtk::prelude::*;
 use std::num::NonZeroU8;
 
@@ -124,17 +125,10 @@ impl DevicesView {
 }
 
 pub struct DeviceWidget {
-    pub button: gtk::Button,
-    pub label: gtk::Label,
+    pub button:   gtk::Button,
+    pub label:    gtk::Label,
     pub progress: gtk::ProgressBar,
-    pub stack: gtk::Stack,
-}
-
-#[derive(Debug)]
-pub struct FirmwareInfo {
-    pub name: Box<str>,
-    pub current: Box<str>,
-    pub latest: Box<str>,
+    pub stack:    gtk::Stack,
 }
 
 // fn separator_header(current: &gtk::ListBoxRow, before: Option<&gtk::ListBoxRow>) {

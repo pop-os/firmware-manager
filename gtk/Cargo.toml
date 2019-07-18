@@ -1,0 +1,29 @@
+[package]
+name = "firmware-manager-gtk"
+version = "0.1.0"
+authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
+edition = "2018"
+
+[features]
+fwupd = []
+system76 = []
+
+[dependencies]
+cascade = "0.1.3"
+err-derive = "0.1.5"
+gio = "0.6.0"
+glib = "0.7.1"
+gtk = {version = "0.6.0", features = [ "v3_22" ] }
+shrinkwraprs = "0.2.1"
+slotmap = "0.3.0"
+html2runes = "1.0.1"
+firmware-manager = { path = "../" }
+
+[target.'cfg(all(not(feature = "fwupd"), feature = "system76"))'.dependencies]
+firmware-manager = { path = "../", features = [ "system76" ] }
+
+[target.'cfg(all(feature = "fwupd", not(feature = "system76")))'.dependencies]
+firmware-manager = { path = "../", features = [ "fwupd" ] }
+
+[target.'cfg(all(feature = "fwupd", feature = "system76"))'.dependencies]
+firmware-manager = { path = "../", features = [ "fwupd", "system76" ] }

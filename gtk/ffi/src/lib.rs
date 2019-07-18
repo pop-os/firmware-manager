@@ -1,4 +1,4 @@
-use firmware_manager::FirmwareWidget;
+use firmware_manager_gtk::FirmwareWidget;
 use glib::object::ObjectType;
 use std::ptr;
 

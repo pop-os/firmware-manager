@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate cascade;
 
-use firmware_manager::FirmwareWidget;
+use firmware_manager_gtk::FirmwareWidget;
 use gio::{prelude::*, ApplicationFlags};
 use gtk::{prelude::*, Application};
 use std::rc::Rc;
