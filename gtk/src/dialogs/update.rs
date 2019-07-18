@@ -14,11 +14,13 @@ impl FirmwareUpdateDialog {
 
             changelog_entries.add(&cascade! {
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
-                ..add(&cascade! {
-                    gtk::Label::new(Some(&*format!("<b>{}</b>", version.as_ref())));
-                    ..set_use_markup(true);
-                    ..set_xalign(0.0);
-                });
+                ..add(
+                    &gtk::LabelBuilder::new()
+                        .label(&*format!("<b>{}</b>", version.as_ref()))
+                        .use_markup(true)
+                        .xalign(0.0)
+                        .build()
+                );
                 ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
                 ..add(&gtk::LabelBuilder::new().label(&*markdown).wrap(true).xalign(0.0).build());
             });
@@ -31,7 +33,9 @@ impl FirmwareUpdateDialog {
         let cancel = gtk::Button::new_with_label("Cancel".into());
 
         let reboot = cascade! {
-            gtk::Button::new_with_label("Reboot and Install".into());
+            gtk::ButtonBuilder::new()
+                .label("Reboot and Install")
+                .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
 
@@ -68,29 +72,37 @@ impl FirmwareUpdateDialog {
             ..set_orientation(gtk::Orientation::Horizontal);
             ..set_border_width(12);
             ..set_spacing(12);
-            ..add(&cascade! {
-                gtk::Image::new_from_icon_name("application-x-firmware".into(), gtk::IconSize::Dialog.into());
-                ..set_valign(gtk::Align::Start);
-            });
+            ..add(
+                &gtk::ImageBuilder::new()
+                    .icon_name("application-x-firmware")
+                    .icon_size(gtk::IconSize::Dialog.into())
+                    .valign(gtk::Align::Start)
+                    .build()
+            );
             ..add(&cascade! {
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
+                ..add(
+                    &gtk::LabelBuilder::new()
+                        .label(&*header_text)
+                        .wrap(true)
+                        .use_markup(true)
+                        .xalign(0.0)
+                        .build()
+                );
                 ..add(&cascade! {
-                    gtk::Label::new(Some(&*header_text));
-                    ..set_line_wrap(true);
-                    ..set_use_markup(true);
-                    ..set_xalign(0.0);
-                });
-                ..add(&cascade! {
-                    gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-                    ..set_hexpand(true);
-                    ..set_vexpand(true);
+                    gtk::ScrolledWindowBuilder::new()
+                        .hexpand(true)
+                        .vexpand(true)
+                        .build();
                     ..add(changelog_entries);
                 });
-                ..add(&cascade! {
-                    gtk::Label::new("If you're on a laptop, <b>plug into power</b> before you begin.".into());
-                    ..set_use_markup(true);
-                    ..set_xalign(0.0);
-                });
+                ..add(
+                    &gtk::LabelBuilder::new()
+                        .label("If you're on a laptop, <b>plug into power</b> before you begin.")
+                        .use_markup(true)
+                        .xalign(0.0)
+                        .build()
+                );
             });
         };
 
@@ -114,8 +126,4 @@ impl FirmwareUpdateDialog {
 
         Self(dialog)
     }
-
-    // pub fn run(&self) -> gtk::ResponseType {
-    //     self.set_window_size()
-    // }
 }

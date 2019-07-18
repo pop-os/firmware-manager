@@ -2,17 +2,17 @@
 extern crate cascade;
 
 use firmware_manager_gtk::FirmwareWidget;
-use gio::{prelude::*, ApplicationFlags};
-use gtk::{prelude::*, Application};
+use gio::prelude::*;
+use gtk::prelude::*;
 use std::rc::Rc;
 
 pub const APP_ID: &str = "com.system76.FirmwareManager";
 
 fn main() {
     glib::set_program_name(APP_ID.into());
+    gtk::init().expect("failed to init GTK");
 
-    let application = Application::new(APP_ID.into(), ApplicationFlags::empty())
-        .expect("GTK initialization failed");
+    let application = gtk::ApplicationBuilder::new().application_id(APP_ID).build();
 
     application.connect_activate(|app| {
         if let Some(window) = app.get_window_by_id(0) {
@@ -26,15 +26,20 @@ fn main() {
 
         let weak_widget = Rc::downgrade(&widget);
         let headerbar = cascade! {
-            gtk::HeaderBar::new();
-            ..set_title("System76 Firmware Manager".into());
-            ..set_show_close_button(true);
+            gtk::HeaderBarBuilder::new()
+                .title("System76 Firmware Manager".into())
+                .show_close_button(true)
+                .build();
             ..show();
             ..pack_end(&cascade! {
-                gtk::Button::new_from_icon_name(
-                    "view-refresh-symbolic".into(),
-                    gtk::IconSize::SmallToolbar
-                );
+                gtk::ButtonBuilder::new()
+                    .image(gtk::ImageBuilder::new()
+                        .icon_name("view-refresh-symbolic")
+                        .icon_size(gtk::IconSize::SmallToolbar.into())
+                        .build()
+                        .upcast_ref::<gtk::Widget>()
+                    )
+                    .build();
                 ..connect_clicked(move |_| {
                     if let Some(widget) = weak_widget.upgrade() {
                         widget.scan();
@@ -45,12 +50,15 @@ fn main() {
         };
 
         let _window = cascade! {
-            gtk::ApplicationWindow::new(app);
-            ..set_titlebar(Some(&headerbar));
-            ..set_icon_name("firmware-manager".into());
+            gtk::ApplicationWindowBuilder::new()
+                .application(app)
+                .icon_name("firmware-manager".into())
+                .window_position(gtk::WindowPosition::Center)
+                .default_width(768)
+                .default_height(576)
+                .build();
             ..set_keep_above(true);
-            ..set_property_window_position(gtk::WindowPosition::Center);
-            ..set_default_size(768, 576);
+            ..set_titlebar(Some(&headerbar));
             ..add(widget.container());
             ..show();
             ..connect_delete_event(move |window, _| {

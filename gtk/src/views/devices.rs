@@ -75,29 +75,29 @@ impl DevicesView {
     }
 
     fn append(container: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
-        let device = cascade! {
-            gtk::Label::new(Some(info.name.as_ref()));
-            ..set_xalign(0.0);
-        };
+        let device = gtk::LabelBuilder::new().label(info.name.as_ref()).xalign(0.0).build();
 
         let label = cascade! {
-            gtk::Label::new(Some(info.current.as_ref()));
-            ..set_xalign(0.0);
+            gtk::LabelBuilder::new()
+                .label(info.current.as_ref())
+                .xalign(0.0)
+                .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_DIM_LABEL);
         };
 
         let button = cascade! {
-            gtk::Button::new_with_label("Update");
-            ..set_halign(gtk::Align::End);
-            ..set_hexpand(true);
-            ..set_visible(info.current != info.latest);
+            gtk::ButtonBuilder::new()
+                .label("Update")
+                .halign(gtk::Align::End)
+                .hexpand(true)
+                .visible(info.current != info.latest)
+                .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
 
         let progress = cascade! {
-            gtk::ProgressBar::new();
+            gtk::ProgressBarBuilder::new().pulse_step(0.33).build();
             ..pulse();
-            ..set_pulse_step(0.33);
             ..show();
         };
 
@@ -110,9 +110,10 @@ impl DevicesView {
         };
 
         container.add(&cascade! {
-            grid: gtk::Grid::new();
-            ..set_border_width(12);
-            ..set_column_spacing(12);
+            gtk::GridBuilder::new()
+                .border_width(12)
+                .column_spacing(12)
+                .build();
             ..attach(&device, 0, 0, 1, 1);
             ..attach(&label, 0, 1, 1, 1);
             ..attach(&stack, 1, 0, 1, 2);
