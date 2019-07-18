@@ -35,16 +35,14 @@ impl FirmwareUpdateDialog {
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
 
-        let dialog =
-            gtk::Object::new(gtk::Dialog::static_type(), &[("use-header-bar", &true)]).unwrap();
-
-        let dialog = cascade! {
-            unsafe { dialog.unsafe_cast::<gtk::Dialog>() };
-            ..set_accept_focus(true);
-            ..set_deletable(true);
-            ..set_destroy_with_parent(true);
-            ..set_size_request(400, 300);
-        };
+        let dialog = gtk::DialogBuilder::new()
+            .accept_focus(true)
+            .use_header_bar(1)
+            .deletable(true)
+            .destroy_with_parent(true)
+            .width_request(400)
+            .height_request(300)
+            .build();
 
         let headerbar = dialog
             .get_header_bar()
