@@ -22,12 +22,13 @@ use std::{
         mpsc::{channel, Receiver, Sender},
         Arc,
     },
-    thread,
+    thread::{self, JoinHandle},
 };
 
 pub struct FirmwareWidget {
     container: gtk::Container,
     sender:    Sender<FirmwareEvent>,
+    background: Option<JoinHandle<()>>,
 }
 
 impl FirmwareWidget {
@@ -37,7 +38,7 @@ impl FirmwareWidget {
 
         let (sender, rx) = channel();
         let (tx, receiver) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
-        Self::background(rx, tx);
+        let background = Self::background(rx, tx);
 
         let view_devices = DevicesView::new();
         let view_empty = EmptyView::new();
@@ -376,7 +377,7 @@ impl FirmwareWidget {
             });
         }
 
-        Self { container: container.upcast::<gtk::Container>(), sender }
+        Self { background: Some(background), container: container.upcast::<gtk::Container>(), sender }
     }
 
     pub fn scan(&self) { let _ = self.sender.send(FirmwareEvent::Scan); }
@@ -384,19 +385,25 @@ impl FirmwareWidget {
     pub fn container(&self) -> &gtk::Container { self.container.upcast_ref::<gtk::Container>() }
 
     /// Manages all firmware client interactions from a background thread.
-    fn background(receiver: Receiver<FirmwareEvent>, sender: glib::Sender<Option<FirmwareSignal>>) {
+    fn background(receiver: Receiver<FirmwareEvent>, sender: glib::Sender<Option<FirmwareSignal>>) -> JoinHandle<()> {
         thread::spawn(move || {
             firmware_manager::event_loop(receiver, |event| {
                 let _ = sender.send(event);
             });
 
             eprintln!("stopping firmware client connection");
-        });
+        })
     }
 }
 
 impl Drop for FirmwareWidget {
-    fn drop(&mut self) { let _ = self.sender.send(FirmwareEvent::Quit); }
+    fn drop(&mut self) {
+        let _ = self.sender.send(FirmwareEvent::Quit);
+
+        if let Some(handle) = self.background.take() {
+            let _ = handle.join();
+        }
+    }
 }
 
 fn reboot() {
