@@ -24,6 +24,15 @@ Depends:
 Description: System76 firmware manager application
  GTK application for managing system and device firmware.
 
+Package: firmware-manager-notify
+Architecture: amd64
+Depends:
+  dbus,
+  ${misc:Depends},
+  ${shlib:Depends}
+Description: System76 firmware manager application
+ GTK application for managing system and device firmware.
+
 Package: libfirmware-manager
 Architecture: amd64
 Depends:

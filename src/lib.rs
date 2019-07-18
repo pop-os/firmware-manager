@@ -5,13 +5,18 @@ extern crate err_derive;
 extern crate shrinkwraprs;
 
 #[cfg(feature = "fwupd")]
-use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
+pub use fwupd_dbus::Client as FwupdClient;
+
+#[cfg(feature = "fwupd")]
+use fwupd_dbus::{Device as FwupdDevice, Release as FwupdRelease};
 
 #[cfg(feature = "system76")]
 use system76_firmware_daemon::{
-    Changelog, Client as System76Client, Digest, Error as System76Error,
-    SystemInfo as S76SystemInfo, ThelioIoInfo,
+    Changelog, Digest, Error as System76Error, SystemInfo as S76SystemInfo, ThelioIoInfo,
 };
+
+#[cfg(feature = "system76")]
+pub use system76_firmware_daemon::Client as System76Client;
 
 use slotmap::{DefaultKey as Entity, SecondaryMap, SlotMap};
 use std::{
@@ -168,7 +173,7 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
 }
 
 #[cfg(feature = "fwupd")]
-fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F) {
+pub fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F) {
     eprintln!("scanning fwupd devices");
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
@@ -201,7 +206,7 @@ fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F) {
 }
 
 #[cfg(feature = "system76")]
-fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: F) {
+pub fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: F) {
     // Thelio system firmware check.
     let event = match client.bios() {
         Ok(current) => match client.download() {
@@ -261,12 +266,12 @@ fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: F) {
 }
 
 #[cfg(feature = "fwupd")]
-fn fwupd_is_active() -> bool { systemd_service_is_active("fwupd") }
+pub fn fwupd_is_active() -> bool { systemd_service_is_active("fwupd") }
 
 #[cfg(feature = "system76")]
-fn s76_firmware_is_active() -> bool { systemd_service_is_active("system76-firmware-daemon") }
+pub fn s76_firmware_is_active() -> bool { systemd_service_is_active("system76-firmware-daemon") }
 
-fn get_client<F, T, E>(name: &str, is_active: fn() -> bool, connect: F) -> Option<T>
+pub fn get_client<F, T, E>(name: &str, is_active: fn() -> bool, connect: F) -> Option<T>
 where
     F: FnOnce() -> Result<T, E>,
     E: std::fmt::Display,

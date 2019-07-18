@@ -17,7 +17,7 @@ ifeq ($(VENDOR),1)
 endif
 
 override_dh_auto_build:
-	make all VENDOR=$(VENDOR) features='system76 fwupd'
+	make all VENDOR=$(VENDOR) features='system76 fwupd' prefix=/usr
 
 override_dh_auto_install:
 	dh_auto_install -- prefix=/usr
