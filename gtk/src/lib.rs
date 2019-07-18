@@ -238,8 +238,7 @@ impl FirmwareWidget {
                                 };
 
                                 eprintln!("received response");
-                                let expected: i32 = gtk::ResponseType::Accept.into();
-                                if expected == response {
+                                if gtk::ResponseType::Accept == response {
                                     // Exchange the button for a progress bar.
                                     if let (Some(stack), Some(progress)) =
                                         (stack.upgrade(), progress.upgrade())
@@ -300,8 +299,7 @@ impl FirmwareWidget {
                                 let dialog = FirmwareUpdateDialog::new(latest, log_entries);
                                 dialog.show_all();
 
-                                let expected: i32 = gtk::ResponseType::Accept.into();
-                                if expected == dialog.run() {
+                                if gtk::ResponseType::Accept == dialog.run() {
                                     // Exchange the button for a progress bar.
                                     if let (Some(stack), Some(progress)) =
                                         (stack.upgrade(), progress.upgrade())

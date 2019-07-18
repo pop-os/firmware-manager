@@ -29,13 +29,13 @@ impl DevicesView {
             ..set_halign(gtk::Align::Center);
             ..set_margin_top(24);
             ..add(&cascade! {
-                gtk::Label::new("<b>System Firmware</b>");
+                gtk::Label::new("<b>System Firmware</b>".into());
                 ..set_use_markup(true);
                 ..set_xalign(0.0);
             });
             ..add(&system_firmware);
             ..add(&cascade! {
-                gtk::Label::new("<b>Device Firmware</b>");
+                gtk::Label::new("<b>Device Firmware</b>".into());
                 ..set_use_markup(true);
                 ..set_xalign(0.0);
             });
@@ -48,9 +48,8 @@ impl DevicesView {
             ..add_widget(&device_firmware);
         };
 
-        // Enable w/ Rust 1.34.0 and gtk-rs 0.8
-        // device_firmware.set_header_func(Some(Box::new(separator_header)));
-        // system_firmware.set_header_func(Some(Box::new(separator_header)));
+        device_firmware.set_header_func(Some(Box::new(separator_header)));
+        system_firmware.set_header_func(Some(Box::new(separator_header)));
 
         let container = cascade! {
             gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
@@ -77,12 +76,12 @@ impl DevicesView {
 
     fn append(container: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
         let device = cascade! {
-            gtk::Label::new(info.name.as_ref());
+            gtk::Label::new(Some(info.name.as_ref()));
             ..set_xalign(0.0);
         };
 
         let label = cascade! {
-            gtk::Label::new(info.current.as_ref());
+            gtk::Label::new(Some(info.current.as_ref()));
             ..set_xalign(0.0);
             ..get_style_context().add_class(&gtk::STYLE_CLASS_DIM_LABEL);
         };
@@ -131,6 +130,8 @@ pub struct DeviceWidget {
     pub stack:    gtk::Stack,
 }
 
-// fn separator_header(current: &gtk::ListBoxRow, before: Option<&gtk::ListBoxRow>) {
-//     current.set_header(Some(&gtk::Separator::new(gtk::Orientation::Horizontal)));
-// }
+fn separator_header(current: &gtk::ListBoxRow, before: Option<&gtk::ListBoxRow>) {
+    if before.is_some() {
+        current.set_header(Some(&gtk::Separator::new(gtk::Orientation::Horizontal)));
+    }
+}

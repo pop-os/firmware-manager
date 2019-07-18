@@ -13,9 +13,9 @@ cdylib-link-lines = "0.1"
 
 [dependencies]
 firmware-manager-gtk = { path = "../" }
-glib = "0.7.1"
-gtk-sys = "0.8.0"
-gtk = "0.6.0"
+glib = "0.8"
+gtk-sys = "0.9"
+gtk = "0.7"
 
 [target.'cfg(all(not(feature = "fwupd"), feature = "system76"))'.dependencies]
 firmware-manager-gtk = { path = "../", features = [ "system76" ] }

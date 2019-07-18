@@ -11,8 +11,8 @@ pub const APP_ID: &str = "com.system76.FirmwareManager";
 fn main() {
     glib::set_program_name(APP_ID.into());
 
-    let application =
-        Application::new(APP_ID, ApplicationFlags::empty()).expect("GTK initialization failed");
+    let application = Application::new(APP_ID.into(), ApplicationFlags::empty())
+        .expect("GTK initialization failed");
 
     application.connect_activate(|app| {
         if let Some(window) = app.get_window_by_id(0) {
@@ -27,12 +27,12 @@ fn main() {
         let weak_widget = Rc::downgrade(&widget);
         let headerbar = cascade! {
             gtk::HeaderBar::new();
-            ..set_title("System76 Firmware Manager");
+            ..set_title("System76 Firmware Manager".into());
             ..set_show_close_button(true);
             ..show();
             ..pack_end(&cascade! {
                 gtk::Button::new_from_icon_name(
-                    "view-refresh-symbolic",
+                    "view-refresh-symbolic".into(),
                     gtk::IconSize::SmallToolbar
                 );
                 ..connect_clicked(move |_| {
@@ -47,7 +47,7 @@ fn main() {
         let _window = cascade! {
             gtk::ApplicationWindow::new(app);
             ..set_titlebar(Some(&headerbar));
-            ..set_icon_name("firmware-manager");
+            ..set_icon_name("firmware-manager".into());
             ..set_keep_above(true);
             ..set_property_window_position(gtk::WindowPosition::Center);
             ..set_default_size(768, 576);

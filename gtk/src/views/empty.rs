@@ -14,14 +14,14 @@ impl EmptyView {
             ..set_valign(gtk::Align::Center);
             ..add(&cascade! {
                 gtk::Image::new_from_icon_name(
-                    "firmware-manager-symbolic",
+                    "firmware-manager-symbolic".into(),
                     gtk::IconSize::Dialog
                 );
                 ..set_pixel_size(64);
             });
             ..add(&cascade! {
                 gtk::Label::new("Managed Firmware Unavailable\n\nNo devices supporting \
-                    automatic firmware updates detected");
+                    automatic firmware updates detected".into());
                 ..set_line_wrap(true);
                 ..set_xalign(0.0);
                 ..set_yalign(0.0);

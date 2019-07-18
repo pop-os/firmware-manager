@@ -15,16 +15,12 @@ impl FirmwareUpdateDialog {
             changelog_entries.add(&cascade! {
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
                 ..add(&cascade! {
-                    gtk::Label::new(format!("<b>{}</b>", version.as_ref()).as_str());
+                    gtk::Label::new(Some(&*format!("<b>{}</b>", version.as_ref())));
                     ..set_use_markup(true);
                     ..set_xalign(0.0);
                 });
                 ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
-                ..add(&cascade! {
-                    gtk::Label::new(&*markdown);
-                    ..set_line_wrap(true);
-                    ..set_xalign(0.0);
-                });
+                ..add(&gtk::LabelBuilder::new().label(&*markdown).wrap(true).xalign(0.0).build());
             });
         });
 
@@ -58,10 +54,12 @@ impl FirmwareUpdateDialog {
 
         cascade! {
             &headerbar;
-            ..set_custom_title(&cascade! {
-                gtk::Label::new("<b>Firmware Update</b>");
-                ..set_use_markup(true);
-            });
+            ..set_custom_title(
+                Some(&gtk::LabelBuilder::new()
+                    .label("<b>Firmware Update</b>")
+                    .use_markup(true)
+                    .build())
+            );
             ..set_show_close_button(false);
             ..pack_start(&cancel);
             ..pack_end(&reboot);
@@ -73,13 +71,13 @@ impl FirmwareUpdateDialog {
             ..set_border_width(12);
             ..set_spacing(12);
             ..add(&cascade! {
-                gtk::Image::new_from_icon_name("application-x-firmware", gtk::IconSize::Dialog.into());
+                gtk::Image::new_from_icon_name("application-x-firmware".into(), gtk::IconSize::Dialog.into());
                 ..set_valign(gtk::Align::Start);
             });
             ..add(&cascade! {
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
                 ..add(&cascade! {
-                    gtk::Label::new(&*header_text);
+                    gtk::Label::new(Some(&*header_text));
                     ..set_line_wrap(true);
                     ..set_use_markup(true);
                     ..set_xalign(0.0);
@@ -91,7 +89,7 @@ impl FirmwareUpdateDialog {
                     ..add(changelog_entries);
                 });
                 ..add(&cascade! {
-                    gtk::Label::new("If you're on a laptop, <b>plug into power</b> before you begin.");
+                    gtk::Label::new("If you're on a laptop, <b>plug into power</b> before you begin.".into());
                     ..set_use_markup(true);
                     ..set_xalign(0.0);
                 });
