@@ -115,7 +115,7 @@ install-ffi:
 
 install-notify:
 	install -Dm0755 "$(NOTBINARY)"  "$(DESTDIR)$(bindir)/$(APPID).Notify"
-	install -Dm0755 "$(STARTUP_DESKTOP)"  "$(DESTDIR)$(prefix)/etc/xdg/autostart/$(APPID).Notify.desktop"
+	install -Dm0644 "$(STARTUP_DESKTOP)"  "$(DESTDIR)/etc/xdg/autostart/$(APPID).Notify.desktop"
 
 ## Uninstall Commands
 
