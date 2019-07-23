@@ -206,7 +206,7 @@ impl FirmwareWidget {
 
                         let entity = entities.insert(device.needs_reboot());
 
-                        let widget = if device.needs_reboot() && device.plugin.as_ref() == "Uefi" {
+                        let widget = if device.needs_reboot() && device.plugin.as_ref() == "uefi" {
                             entities.system = Some(entity);
                             view_devices.system(&info)
                         } else {
