@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate cascade;
 #[macro_use]
-extern crate err_derive;
-#[macro_use]
 extern crate shrinkwraprs;
 
 mod dialogs;
@@ -26,8 +24,8 @@ use std::{
 };
 
 pub struct FirmwareWidget {
-    container: gtk::Container,
-    sender:    Sender<FirmwareEvent>,
+    container:  gtk::Container,
+    sender:     Sender<FirmwareEvent>,
     background: Option<JoinHandle<()>>,
 }
 
@@ -167,7 +165,7 @@ impl FirmwareWidget {
                                 let _ = tx_progress
                                     .send(ActivateEvent::Deactivate(widget.progress.clone()));
 
-                                if entities[entity] {
+                                if entities.is_system(entity) {
                                     reboot();
                                 }
                             }
@@ -204,10 +202,10 @@ impl FirmwareWidget {
                             },
                         };
 
-                        let entity = entities.insert(device.needs_reboot());
+                        let entity = entities.insert();
 
                         let widget = if device.needs_reboot() {
-                            entities.system = Some(entity);
+                            entities.associate_system(entity);
                             view_devices.system(&info)
                         } else {
                             view_devices.device(&info)
@@ -265,7 +263,6 @@ impl FirmwareWidget {
                     FirmwareSignal::Scanning => {
                         view_devices.clear();
                         entities.entities.clear();
-                        entities.system = None;
 
                         let _ = tx_progress.send(ActivateEvent::Clear);
 
@@ -277,8 +274,8 @@ impl FirmwareWidget {
                     #[cfg(feature = "system76")]
                     FirmwareSignal::S76System(info, digest, changelog) => {
                         let widget = view_devices.system(&info);
-                        let entity = entities.insert(true);
-                        entities.system = Some(entity);
+                        let entity = entities.insert();
+                        entities.associate_system(entity);
 
                         if info.current == info.latest {
                             widget.stack.set_visible(false);
@@ -328,7 +325,7 @@ impl FirmwareWidget {
                     FirmwareSignal::ThelioIo(info, digest) => {
                         let widget = view_devices.device(&info);
                         let requires_update = info.current != info.latest;
-                        let entity = entities.insert(false);
+                        let entity = entities.insert();
 
                         // Only the first Thelio I/O device will have a connected button.
                         if let Some(digest) = digest {
@@ -377,7 +374,11 @@ impl FirmwareWidget {
             });
         }
 
-        Self { background: Some(background), container: container.upcast::<gtk::Container>(), sender }
+        Self {
+            background: Some(background),
+            container: container.upcast::<gtk::Container>(),
+            sender,
+        }
     }
 
     pub fn scan(&self) { let _ = self.sender.send(FirmwareEvent::Scan); }
@@ -385,7 +386,10 @@ impl FirmwareWidget {
     pub fn container(&self) -> &gtk::Container { self.container.upcast_ref::<gtk::Container>() }
 
     /// Manages all firmware client interactions from a background thread.
-    fn background(receiver: Receiver<FirmwareEvent>, sender: glib::Sender<Option<FirmwareSignal>>) -> JoinHandle<()> {
+    fn background(
+        receiver: Receiver<FirmwareEvent>,
+        sender: glib::Sender<Option<FirmwareSignal>>,
+    ) -> JoinHandle<()> {
         thread::spawn(move || {
             firmware_manager::event_loop(receiver, |event| {
                 let _ = sender.send(event);

@@ -66,15 +66,19 @@ pub struct FirmwareInfo {
 #[derive(Debug, Default, Shrinkwrap)]
 pub struct Entities {
     #[shrinkwrap(main_field)]
-    pub entities: SlotMap<Entity, bool>,
-    pub system: Option<Entity>,
+    pub entities: SlotMap<Entity, ()>,
+    pub system: SecondaryMap<Entity, ()>,
 
     #[cfg(feature = "system76")]
     pub thelio_io: SecondaryMap<Entity, ()>,
 }
 
 impl Entities {
-    pub fn insert(&mut self, needs_reboot: bool) -> Entity { self.entities.insert(needs_reboot) }
+    pub fn associate_system(&mut self, entity: Entity) { self.system.insert(entity, ()); }
+
+    pub fn insert(&mut self) -> Entity { self.entities.insert(()) }
+
+    pub fn is_system(&self, entity: Entity) -> bool { self.system.contains_key(entity) }
 }
 
 #[derive(Debug)]
