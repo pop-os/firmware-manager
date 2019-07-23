@@ -132,6 +132,10 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
                 #[cfg(feature = "fwupd")]
                 {
                     if let Some(ref client) = fwupd {
+                        if let Err(why) = fwupd_updates(client, http_client) {
+                            eprintln!("failed to update fwupd remotes: {}", why);
+                        }
+
                         fwupd_scan(client, sender);
                     }
                 }
@@ -179,6 +183,7 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
 #[cfg(feature = "fwupd")]
 pub fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F) {
     eprintln!("scanning fwupd devices");
+
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
         Err(why) => {
@@ -207,6 +212,33 @@ pub fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F)
             }
         }
     }
+}
+
+#[cfg(feature = "fwupd")]
+pub fn fwupd_updates(
+    client: &FwupdClient,
+    http: &reqwest::Client,
+) -> Result<(), fwupd_dbus::Error> {
+    use std::time::Duration;
+
+    const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
+
+    for remote in client.remotes()? {
+        if let fwupd_dbus::RemoteKind::Download = remote.kind {
+            let update = remote
+                .time_since_last_update()
+                .map_or(true, |since| since > Duration::from_secs(14 * SECONDS_IN_DAY));
+
+            if update {
+                eprintln!("updating remote cache for {}", remote.filename_cache);
+                if let Err(why) = remote.update_metadata(client, http) {
+                    eprintln!("failed to fetch updates from {}: {}", remote.filename_cache, why);
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(feature = "system76")]
