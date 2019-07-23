@@ -10,7 +10,7 @@ const UPDATES_FOUND: i32 = 3;
 const GNOME_CONTROL_CENTER: &str = "/usr/share/applications/gnome-firmware-panel.desktop";
 
 #[cfg(feature = "fwupd")]
-use firmware_manager::{fwupd_is_active, fwupd_scan, FwupdClient};
+use firmware_manager::{fwupd_is_active, fwupd_scan, fwupd_updates, FwupdClient};
 
 #[cfg(feature = "system76")]
 use firmware_manager::{s76_firmware_is_active, s76_scan, System76Client};
@@ -20,6 +20,8 @@ fn main() {
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
     #[cfg(feature = "fwupd")]
     let fwupd = get_client("fwupd", fwupd_is_active, FwupdClient::new);
+    #[cfg(feature = "fwupd")]
+    let http_client = &reqwest::Client::new();
 
     let event_handler = |event: Option<FirmwareSignal>| {
         if let Some(event) = event {
@@ -43,6 +45,10 @@ fn main() {
     #[cfg(feature = "fwupd")]
     {
         if let Some(ref client) = fwupd {
+            if let Err(why) = fwupd_updates(client, http_client) {
+                eprintln!("failed to update fwupd remotes: {}", why);
+            }
+
             fwupd_scan(client, &event_handler);
         }
     }

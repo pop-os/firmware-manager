@@ -621,6 +621,7 @@ dependencies = [
  "err-derive 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "firmware-manager 0.1.0",
  "notify-rust 3.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "reqwest 0.9.19 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

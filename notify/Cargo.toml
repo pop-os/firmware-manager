@@ -12,6 +12,7 @@ fwupd = []
 firmware-manager = { path = "../" }
 err-derive = "0.1.5"
 notify-rust = "3.6.0"
+reqwest = "0.9.19"
 
 [target.'cfg(all(not(feature = "fwupd"), feature = "system76"))'.dependencies]
 firmware-manager = { path = "../", features = [ "system76" ] }
