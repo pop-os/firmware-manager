@@ -134,11 +134,6 @@ impl FirmwareWidget {
             }
 
             receiver.attach(None, move |event| {
-                let event = match event {
-                    Some(event) => event,
-                    None => return glib::Continue(false),
-                };
-
                 match event {
                     FirmwareSignal::DeviceUpdated(entity, latest) => {
                         let mut device_continue = true;
@@ -368,6 +363,7 @@ impl FirmwareWidget {
 
                         stack.set_visible_child(view_devices.as_ref());
                     }
+                    FirmwareSignal::Stop => return glib::Continue(false),
                 }
 
                 glib::Continue(true)
@@ -388,12 +384,14 @@ impl FirmwareWidget {
     /// Manages all firmware client interactions from a background thread.
     fn background(
         receiver: Receiver<FirmwareEvent>,
-        sender: glib::Sender<Option<FirmwareSignal>>,
+        sender: glib::Sender<FirmwareSignal>,
     ) -> JoinHandle<()> {
         thread::spawn(move || {
             firmware_manager::event_loop(receiver, |event| {
                 let _ = sender.send(event);
             });
+
+            let _ = sender.send(FirmwareSignal::Stop);
 
             eprintln!("stopping firmware client connection");
         })

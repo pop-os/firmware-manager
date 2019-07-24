@@ -106,9 +106,12 @@ pub enum FirmwareSignal {
     /// Thelio I/O firmware was discovered.
     #[cfg(feature = "system76")]
     ThelioIo(FirmwareInfo, Option<Digest>),
+
+    /// Stops listening
+    Stop,
 }
 
-pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEvent>, sender: F) {
+pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, sender: F) {
     #[cfg(feature = "system76")]
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
     #[cfg(feature = "fwupd")]
@@ -120,7 +123,7 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
         match event {
             FirmwareEvent::Scan => {
                 let sender = &sender;
-                sender(Some(FirmwareSignal::Scanning));
+                sender(FirmwareSignal::Scanning);
 
                 #[cfg(feature = "system76")]
                 {
@@ -151,13 +154,13 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
                     None => panic!("fwupd event assigned to non-fwupd button"),
                 };
 
-                sender(Some(event));
+                sender(event);
             }
             #[cfg(feature = "system76")]
             FirmwareEvent::S76System(entity, digest, _latest) => {
                 match s76.as_ref().map(|client| client.schedule(&digest)) {
-                    Some(Ok(_)) => sender(Some(FirmwareSignal::SystemScheduled)),
-                    Some(Err(why)) => sender(Some(FirmwareSignal::Error(Some(entity), why.into()))),
+                    Some(Ok(_)) => sender(FirmwareSignal::SystemScheduled),
+                    Some(Err(why)) => sender(FirmwareSignal::Error(Some(entity), why.into())),
                     None => panic!("thelio event assigned to non-thelio button"),
                 }
             }
@@ -170,7 +173,7 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
                     None => panic!("thelio event assigned to non-thelio button"),
                 };
 
-                sender(Some(event));
+                sender(event);
             }
             FirmwareEvent::Quit => {
                 eprintln!("received quit signal");
@@ -181,14 +184,14 @@ pub fn event_loop<F: Fn(Option<FirmwareSignal>)>(receiver: Receiver<FirmwareEven
 }
 
 #[cfg(feature = "fwupd")]
-pub fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F) {
+pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     eprintln!("scanning fwupd devices");
 
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
         Err(why) => {
             eprintln!("errored");
-            sender(Some(FirmwareSignal::Error(None, why.into())));
+            sender(FirmwareSignal::Error(None, why.into()));
             return;
         }
     };
@@ -206,9 +209,9 @@ pub fn fwupd_scan<F: Fn(Option<FirmwareSignal>)>(fwupd: &FwupdClient, sender: F)
                     continue;
                 };
 
-                sender(Some(FirmwareSignal::Fwupd(device, Some(releases))));
+                sender(FirmwareSignal::Fwupd(device, Some(releases)));
             } else {
-                sender(Some(FirmwareSignal::Fwupd(device, None)));
+                sender(FirmwareSignal::Fwupd(device, None));
             }
         }
     }
@@ -242,7 +245,7 @@ pub fn fwupd_updates(
 }
 
 #[cfg(feature = "system76")]
-pub fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: F) {
+pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     // Thelio system firmware check.
     let event = match client.bios() {
         Ok(current) => match client.download() {
@@ -266,7 +269,7 @@ pub fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: 
         Err(why) => FirmwareSignal::Error(None, why.into()),
     };
 
-    sender(Some(event));
+    sender(event);
 
     // Thelio I/O system firmware check.
     let event = match client.thelio_io_list() {
@@ -286,7 +289,7 @@ pub fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: 
                     };
 
                     let event = FirmwareSignal::ThelioIo(fw, digest.take());
-                    sender(Some(event));
+                    sender(event);
                 }
 
                 None
@@ -297,7 +300,7 @@ pub fn s76_scan<F: Fn(Option<FirmwareSignal>)>(client: &System76Client, sender: 
     };
 
     if let Some(event) = event {
-        sender(Some(event));
+        sender(event);
     }
 }
 

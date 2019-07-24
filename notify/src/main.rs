@@ -23,16 +23,12 @@ fn main() {
     #[cfg(feature = "fwupd")]
     let http_client = &reqwest::Client::new();
 
-    let event_handler = |event: Option<FirmwareSignal>| {
-        if let Some(event) = event {
-            match event {
-                #[cfg(feature = "fwupd")]
-                FirmwareSignal::Fwupd(..) => notify(),
-                #[cfg(feature = "system76")]
-                FirmwareSignal::S76System(..) | FirmwareSignal::ThelioIo(..) => notify(),
-                _ => (),
-            }
-        }
+    let event_handler = |event: FirmwareSignal| match event {
+        #[cfg(feature = "fwupd")]
+        FirmwareSignal::Fwupd(..) => notify(),
+        #[cfg(feature = "system76")]
+        FirmwareSignal::S76System(..) | FirmwareSignal::ThelioIo(..) => notify(),
+        _ => (),
     };
 
     #[cfg(feature = "system76")]
