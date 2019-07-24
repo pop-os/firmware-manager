@@ -282,7 +282,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                 let digest = &mut Some(digest);
                 for (num, (_, revision)) in list.iter().enumerate() {
                     let fw = FirmwareInfo {
-                        name:    format!("Thelio I/O #{}", num).into(),
+                        name:    format!("Thelio I/O #{}", num  + 1).into(),
                         current: Box::from(if revision.is_empty() {
                             "N/A"
                         } else {
