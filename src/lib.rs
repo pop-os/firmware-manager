@@ -43,18 +43,25 @@ impl From<System76Error> for Error {
     fn from(error: System76Error) -> Self { Error::System76(error) }
 }
 
+/// A request for the background event loop to perform.
 #[derive(Debug)]
 pub enum FirmwareEvent {
+    /// Upgrade the firmware of a fwupd-compatible device.
     #[cfg(feature = "fwupd")]
     Fwupd(Entity, Arc<FwupdDevice>, Arc<FwupdRelease>),
-    Quit,
+    /// Stop processing events.
+    Stop,
+    /// Upgrade system firmware for System76 systems.
     #[cfg(feature = "system76")]
     S76System(Entity, System76Digest, Box<str>),
+    /// Search for available firmware devices.
     Scan,
+    /// Upgrade the firmware of Thelio I/O boarods.
     #[cfg(feature = "system76")]
     ThelioIo(Entity, System76Digest, Box<str>),
 }
 
+/// Information about a device and its current and latest firmware.
 #[derive(Debug)]
 pub struct FirmwareInfo {
     pub name:    Box<str>,
@@ -64,20 +71,38 @@ pub struct FirmwareInfo {
 
 #[derive(Debug, Default, Shrinkwrap)]
 pub struct Entities {
+    /// The primary storage to record all device entities.
     #[shrinkwrap(main_field)]
     pub entities: SlotMap<Entity, ()>,
+
+    /// Secondary storage to keep record of all system devices.
     pub system: SecondaryMap<Entity, ()>,
 
+    /// Secondary storage to keep record of all Thelio I/O devices.
     #[cfg(feature = "system76")]
     pub thelio_io: SecondaryMap<Entity, ()>,
 }
 
 impl Entities {
+    /// Associate this entity as a system device
     pub fn associate_system(&mut self, entity: Entity) { self.system.insert(entity, ()); }
 
-    pub fn insert(&mut self) -> Entity { self.entities.insert(()) }
+    /// Associate this entity as a Thelio I/O device
+    pub fn associate_thelio_io(&mut self, entity: Entity) { self.thelio_io.insert(entity, ()); }
 
+    /// Clear all entities from the world
+    ///
+    /// Entities are automatically erased from secondary storages on lookup
+    pub fn clear(&mut self) { self.entities.clear(); }
+
+    /// Create a new device entity.
+    pub fn create(&mut self) -> Entity { self.entities.insert(()) }
+
+    /// Check if an entity is a system device
     pub fn is_system(&self, entity: Entity) -> bool { self.system.contains_key(entity) }
+
+    /// Check if an entity is a Thelio I/O device
+    pub fn is_thelio_io(&self, entity: Entity) -> bool { self.thelio_io.contains_key(entity) }
 }
 
 #[derive(Debug)]
@@ -113,6 +138,8 @@ pub enum FirmwareSignal {
     Stop,
 }
 
+/// An event loop that should be run in the background, as this function will block until
+/// the stop signal is received.
 pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, sender: F) {
     #[cfg(feature = "system76")]
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
@@ -177,7 +204,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
 
                 sender(event);
             }
-            FirmwareEvent::Quit => {
+            FirmwareEvent::Stop => {
                 eprintln!("received quit signal");
                 break;
             }
@@ -185,6 +212,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
     }
 }
 
+/// Scan for supported devices from the fwupd DBus daemon.
 #[cfg(feature = "fwupd")]
 pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     eprintln!("scanning fwupd devices");
@@ -209,6 +237,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     }
 }
 
+/// Update the fwupd remotes
 #[cfg(feature = "fwupd")]
 pub fn fwupd_updates(
     client: &FwupdClient,
@@ -236,6 +265,7 @@ pub fn fwupd_updates(
     Ok(())
 }
 
+/// Scan for available System76 firmware
 #[cfg(feature = "system76")]
 pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     // Thelio system firmware check.
@@ -296,12 +326,15 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     }
 }
 
+/// Check if the fwupd service is active.
 #[cfg(feature = "fwupd")]
 pub fn fwupd_is_active() -> bool { systemd_service_is_active("fwupd") }
 
+/// Check if the system76-firmware-daemon service is active.
 #[cfg(feature = "system76")]
 pub fn s76_firmware_is_active() -> bool { systemd_service_is_active("system76-firmware-daemon") }
 
+/// Generic function for attaining a DBus client connection to a firmware service.
 pub fn get_client<F, T, E>(name: &str, is_active: fn() -> bool, connect: F) -> Option<T>
 where
     F: FnOnce() -> Result<T, E>,

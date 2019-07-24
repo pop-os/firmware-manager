@@ -25,7 +25,7 @@ use std::{
     },
     thread::{self, JoinHandle},
 };
-
+/// The complete firmware manager, as a widget structure
 pub struct FirmwareWidget {
     container:  gtk::Container,
     sender:     Sender<FirmwareEvent>,
@@ -33,6 +33,11 @@ pub struct FirmwareWidget {
 }
 
 impl FirmwareWidget {
+    /// Create a new firmware manager widget.
+    ///
+    /// # Notes
+    /// - This will spawn a background thread to handle non-UI events.
+    /// - On drop, the background thread will exit
     pub fn new() -> Self {
         #[cfg(all(not(feature = "fwupd"), not(feature = "system76")))]
         compile_error!("must enable one or more of [fwupd system76]");
@@ -91,9 +96,15 @@ impl FirmwareWidget {
             let sender = sender.clone();
             let stack = stack.clone();
 
+            // All devices in the system will be stored as entities here.
             let mut entities = Entities::default();
-            let mut device_widgets: SecondaryMap<Entity, (DeviceWidget, Rc<Cell<bool>>)> =
-                SecondaryMap::new();
+
+            // Extra component storages used by our entities, which are specific to the GTK
+            // implementation.
+            let mut device_widget_storage: SecondaryMap<Entity, DeviceWidget> = SecondaryMap::new();
+            let mut upgradeable_storage: SecondaryMap<Entity, Rc<Cell<bool>>> = SecondaryMap::new();
+
+            // Miscellaneous state that will be captured by the main event loop's move closure.
             let mut devices_found = false;
             let thelio_io_upgradeable =
                 Rc::new(RefCell::new(ThelioData { digest: None, upgradeable: false }));
@@ -106,9 +117,9 @@ impl FirmwareWidget {
 
                         #[cfg(feature = "system76")]
                         {
-                            if entities.thelio_io.contains_key(entity) {
+                            if entities.is_thelio_io(entity) {
                                 for entity in entities.thelio_io.keys() {
-                                    let widget = &device_widgets[entity].0;
+                                    let widget = &device_widget_storage[entity];
                                     widget.stack.set_visible(false);
                                     widget.label.set_text(latest.as_ref());
                                     let _ = tx_progress
@@ -120,10 +131,14 @@ impl FirmwareWidget {
                         }
 
                         if device_continue {
-                            if let Some((widget, upgradeable)) = device_widgets.get(entity) {
+                            if let Some(widget) = device_widget_storage.get(entity) {
                                 widget.stack.set_visible(false);
                                 widget.label.set_text(latest.as_ref());
-                                upgradeable.set(false);
+
+                                if let Some(upgradeable) = upgradeable_storage.get(entity) {
+                                    upgradeable.set(false);
+                                }
+
                                 let _ = tx_progress
                                     .send(ActivateEvent::Deactivate(widget.progress.clone()));
 
@@ -149,7 +164,7 @@ impl FirmwareWidget {
                         info_bar_label.set_text(error_message.as_str().into());
 
                         if let Some(entity) = entity {
-                            let widget = &device_widgets[entity].0;
+                            let widget = &device_widget_storage[entity];
                             widget.stack.set_visible_child(&widget.button);
                         }
                     }
@@ -163,7 +178,7 @@ impl FirmwareWidget {
                             latest:  releases.iter().last().expect("no releases").version.clone(),
                         };
 
-                        let entity = entities.insert();
+                        let entity = entities.create();
 
                         let widget = if device.needs_reboot() {
                             entities.associate_system(entity);
@@ -204,14 +219,15 @@ impl FirmwareWidget {
                             });
                         }
 
-                        device_widgets.insert(entity, (widget, upgradeable));
+                        device_widget_storage.insert(entity, widget);
+                        upgradeable_storage.insert(entity, upgradeable);
                         stack.show();
                         stack.set_visible_child(view_devices.as_ref());
                     }
                     // Begins searching for devices that have firmware upgrade support
                     FirmwareSignal::Scanning => {
                         view_devices.clear();
-                        entities.entities.clear();
+                        entities.clear();
                         devices_found = false;
 
                         let _ = tx_progress.send(ActivateEvent::Clear);
@@ -234,7 +250,7 @@ impl FirmwareWidget {
                     FirmwareSignal::S76System(info, digest, changelog) => {
                         devices_found = true;
                         let widget = view_devices.system(&info);
-                        let entity = entities.insert();
+                        let entity = entities.create();
                         entities.associate_system(entity);
                         let upgradeable = info.current != info.latest;
 
@@ -270,7 +286,8 @@ impl FirmwareWidget {
                             });
                         }
 
-                        device_widgets.insert(entity, (widget, upgradeable));
+                        device_widget_storage.insert(entity, widget);
+                        upgradeable_storage.insert(entity, upgradeable);
                         stack.show();
                         stack.set_visible_child(view_devices.as_ref());
                     }
@@ -279,7 +296,7 @@ impl FirmwareWidget {
                     FirmwareSignal::ThelioIo(info, digest) => {
                         devices_found = true;
                         let widget = view_devices.device(&info);
-                        let entity = entities.insert();
+                        let entity = entities.create();
                         let info = Rc::new(info);
 
                         if info.current != info.latest {
@@ -354,8 +371,8 @@ impl FirmwareWidget {
                         }
 
                         widget.stack.set_visible(false);
-                        device_widgets.insert(entity, (widget, Rc::new(Cell::new(false))));
-                        entities.thelio_io.insert(entity, ());
+                        device_widget_storage.insert(entity, widget);
+                        entities.associate_thelio_io(entity);
 
                         // If any Thelio I/O device requires an update, then enable the
                         // update button on the first Thelio I/O device widget.
@@ -365,7 +382,7 @@ impl FirmwareWidget {
                                 .keys()
                                 .next()
                                 .expect("missing thelio I/O widgets");
-                            device_widgets[entity].0.stack.set_visible(true);
+                            device_widget_storage[entity].stack.set_visible(true);
                         }
 
                         stack.show();
@@ -388,8 +405,10 @@ impl FirmwareWidget {
         }
     }
 
+    /// Sends a signal to the background thread to scan for available firmware.
     pub fn scan(&self) { let _ = self.sender.send(FirmwareEvent::Scan); }
 
+    /// Returns the primary container widget of this structure.
     pub fn container(&self) -> &gtk::Container { self.container.upcast_ref::<gtk::Container>() }
 
     /// Manages all firmware client interactions from a background thread.
@@ -411,7 +430,7 @@ impl FirmwareWidget {
 
 impl Drop for FirmwareWidget {
     fn drop(&mut self) {
-        let _ = self.sender.send(FirmwareEvent::Quit);
+        let _ = self.sender.send(FirmwareEvent::Stop);
 
         if let Some(handle) = self.background.take() {
             let _ = handle.join();
@@ -425,94 +444,6 @@ fn reboot() {
     }
 }
 
-/// Senders and widgets shared by all device dialogs.
-struct DialogData {
-    sender:      Sender<FirmwareEvent>,
-    tx_progress: Sender<ActivateEvent>,
-    stack:       glib::WeakRef<gtk::Stack>,
-    progress:    glib::WeakRef<gtk::ProgressBar>,
-    info:        FirmwareInfo,
-}
-
-#[cfg(feature = "fwupd")]
-struct FwupdDialogData {
-    entity:   Entity,
-    device:   Arc<FwupdDevice>,
-    releases: BTreeSet<FwupdRelease>,
-    shared:   DialogData,
-}
-
-fn fwupd_dialog(data: &FwupdDialogData, upgradeable: bool, upgrade_button: bool) {
-    let &FwupdDialogData { entity, device, releases, shared } = &data;
-    let &DialogData { sender, tx_progress, stack, progress, info } = &shared;
-
-    let response = if !upgrade_button || device.needs_reboot() {
-        let &FirmwareInfo { ref latest, .. } = &info;
-
-        let log_entries = releases
-            .iter()
-            .rev()
-            .map(|release| (release.version.as_ref(), release.description.as_ref()));
-
-        let dialog =
-            FirmwareUpdateDialog::new(latest, log_entries, upgradeable, device.needs_reboot());
-
-        let response = dialog.run();
-        dialog.destroy();
-        response
-    } else {
-        gtk::ResponseType::Accept.into()
-    };
-
-    if gtk::ResponseType::Accept == response {
-        // Exchange the button for a progress bar.
-        if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
-            stack.set_visible_child(&progress);
-            let _ = tx_progress.send(ActivateEvent::Activate(progress));
-        }
-
-        let _ = sender.send(FirmwareEvent::Fwupd(
-            *entity,
-            device.clone(),
-            Arc::new(releases.iter().last().expect("no release found").clone()),
-        ));
-    }
-}
-
-#[cfg(feature = "system76")]
-struct System76DialogData {
-    entity:    Entity,
-    digest:    System76Digest,
-    changelog: System76Changelog,
-    shared:    DialogData,
-}
-
-#[cfg(feature = "system76")]
-fn s76_system_dialog(data: &System76DialogData, upgradeable: bool) {
-    let &System76DialogData { entity, digest, changelog, shared } = &data;
-    let &DialogData { sender, tx_progress, stack, progress, info } = &shared;
-    let &FirmwareInfo { latest, .. } = &info;
-
-    let log_entries = changelog.versions.iter().map(|version| {
-        (version.bios.as_ref(), version.description.as_ref().map_or("N/A", |desc| desc.as_ref()))
-    });
-
-    let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, true);
-
-    if gtk::ResponseType::Accept == dialog.run() {
-        // Exchange the button for a progress bar.
-        if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
-            stack.set_visible_child(&progress);
-            let _ = tx_progress.send(ActivateEvent::Activate(progress));
-        }
-
-        let event = FirmwareEvent::S76System(*entity, digest.clone(), latest.clone());
-        let _ = sender.send(event);
-    }
-
-    dialog.destroy();
-}
-
 /// Activates, or deactivates, the movement of progress bars.
 /// TODO: As soon as glib::WeakRef supports Eq/Hash derives, use WeakRef instead.
 enum ActivateEvent {
@@ -521,6 +452,7 @@ enum ActivateEvent {
     Clear,
 }
 
+/// Actively moves available progress bars on the device view.
 fn progress_handler(rx_progress: Receiver<ActivateEvent>) {
     let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
     let mut remove = Vec::new();
