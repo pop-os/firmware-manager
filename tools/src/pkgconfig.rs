@@ -4,11 +4,11 @@ use std::{
     io::{self, Write},
 };
 
-const PKGCONFIG: &str = r#"Name: {name}
+const PKGCONFIG: &str = r#"Name: ${name}
 Description: {description}
 Version: {version}
-Cflags: -I${{includedir}}
-Libs: -L${{libdir}} -l{name}"#;
+Cflags: -I${includedir}
+Libs: -L${libdir} -l${name}_gtk"#;
 
 fn main() -> io::Result<()> {
     let mut args = env::args();
@@ -22,5 +22,5 @@ fn main() -> io::Result<()> {
     let target = ["target/", &app, ".pc"].concat();
     let mut file = File::create(&target).expect("unable to create pkgconfig file");
 
-    writeln!(&mut file, "libdir={}\nincludedir={}\n{}", libdir, includedir, PKGCONFIG)
+    writeln!(&mut file, "libdir={}\nincludedir={}\nname={}\n{}", libdir, includedir, app, PKGCONFIG)
 }

@@ -97,7 +97,7 @@ $(LIBRARY): $(SOURCES) $(FFI_SOURCES) vendor-check
 
 ## Builds the pkg-config file necessary to locate the library.
 
-$(PKGCONFIG):
+$(PKGCONFIG): tools/src/pkgconfig.rs
 	cargo run -p tools --bin pkgconfig $(DESKTOP_ARGS) -- \
 		$(PACKAGE) $(libdir) $(includedir)
 
