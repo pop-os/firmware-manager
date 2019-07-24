@@ -96,6 +96,9 @@ pub enum FirmwareSignal {
     /// Devices are being scanned
     Scanning,
 
+    /// Signals when scanning has completed.
+    ScanningComplete,
+
     /// System firmware was scheduled for installation.
     SystemScheduled,
 

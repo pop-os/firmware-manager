@@ -93,9 +93,11 @@ impl FirmwareWidget {
 
             let mut entities = Entities::default();
             let mut device_widgets: SecondaryMap<Entity, DeviceWidget> = SecondaryMap::new();
+            let mut devices_found = false;
 
             receiver.attach(None, move |event| {
                 match event {
+                    // An event that occurs when firmware has successfully updated.
                     FirmwareSignal::DeviceUpdated(entity, latest) => {
                         let mut device_continue = true;
 
@@ -127,6 +129,7 @@ impl FirmwareWidget {
                             }
                         }
                     }
+                    // An error occurred in the background thread, which we shall display in the UI.
                     FirmwareSignal::Error(entity, why) => {
                         // Convert the error and its causes into a string.
                         let mut error_message = format!("{}", why);
@@ -147,8 +150,10 @@ impl FirmwareWidget {
                             widget.stack.set_visible_child(&widget.button);
                         }
                     }
+                    // An event that occurs when fwupd firmware is found.
                     #[cfg(feature = "fwupd")]
                     FirmwareSignal::Fwupd(device, releases) => {
+                        devices_found = true;
                         let info = FirmwareInfo {
                             name:    [&device.vendor, " ", &device.name].concat().into(),
                             current: device.version.clone(),
@@ -213,21 +218,34 @@ impl FirmwareWidget {
                         }
 
                         device_widgets.insert(entity, widget);
+                        stack.show();
                         stack.set_visible_child(view_devices.as_ref());
                     }
+                    // Begins searching for devices that have firmware upgrade support
                     FirmwareSignal::Scanning => {
                         view_devices.clear();
                         entities.entities.clear();
+                        devices_found = false;
 
                         let _ = tx_progress.send(ActivateEvent::Clear);
 
-                        stack.set_visible_child(view_empty.as_ref());
+                        stack.hide();
                     }
+                    // Signal is received when scanning has completed.
+                    FirmwareSignal::ScanningComplete => {
+                        if !devices_found {
+                            stack.show();
+                            stack.set_visible_child(view_empty.as_ref());
+                        }
+                    }
+                    // When system firmwmare is successfully scheduled, reboot the system.
                     FirmwareSignal::SystemScheduled => {
                         reboot();
                     }
+                    // An event that occurs when System76 system firmware has been found.
                     #[cfg(feature = "system76")]
                     FirmwareSignal::S76System(info, digest, changelog) => {
+                        devices_found = true;
                         let widget = view_devices.system(&info);
                         let entity = entities.insert();
                         entities.associate_system(entity);
@@ -274,10 +292,13 @@ impl FirmwareWidget {
                         }
 
                         device_widgets.insert(entity, widget);
+                        stack.show();
                         stack.set_visible_child(view_devices.as_ref());
                     }
+                    // An event that occurs when a Thelio I/O board was discovered.
                     #[cfg(feature = "system76")]
                     FirmwareSignal::ThelioIo(info, digest) => {
+                        devices_found = true;
                         let widget = view_devices.device(&info);
                         let requires_update = info.current != info.latest;
                         let entity = entities.insert();
@@ -321,8 +342,10 @@ impl FirmwareWidget {
                             device_widgets[entity].stack.set_visible(true);
                         }
 
+                        stack.show();
                         stack.set_visible_child(view_devices.as_ref());
                     }
+                    // This is the last message sent before the background thread exits.
                     FirmwareSignal::Stop => {
                         return glib::Continue(false);
                     }
