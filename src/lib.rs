@@ -201,7 +201,8 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     for device in devices {
         if device.is_supported() {
             if let Ok(releases) = fwupd.releases(&device) {
-                let upgradeable = releases.iter().rev().next().map_or(false, |v| v.version != device.version);
+                let upgradeable =
+                    releases.iter().rev().next().map_or(false, |v| v.version != device.version);
                 sender(FirmwareSignal::Fwupd(device, upgradeable, releases.into()));
             }
         }

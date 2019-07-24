@@ -53,14 +53,11 @@ impl FirmwareWidget {
             gtk::InfoBar::new();
             ..set_message_type(gtk::MessageType::Error);
             ..set_show_close_button(true);
-            // ..set_revealed(false);
             ..set_valign(gtk::Align::Start);
             ..connect_close(|info_bar| {
-                // info_bar.set_revealed(false);
                 info_bar.set_visible(false);
             });
             ..connect_response(|info_bar, _| {
-                // info_bar.set_revealed(false);
                 info_bar.set_visible(false);
             });
         };
@@ -95,7 +92,8 @@ impl FirmwareWidget {
             let stack = stack.clone();
 
             let mut entities = Entities::default();
-            let mut device_widgets: SecondaryMap<Entity, (DeviceWidget, Rc<Cell<bool>>)> = SecondaryMap::new();
+            let mut device_widgets: SecondaryMap<Entity, (DeviceWidget, Rc<Cell<bool>>)> =
+                SecondaryMap::new();
             let mut devices_found = false;
             let thelio_io_upgradeable =
                 Rc::new(RefCell::new(ThelioData { digest: None, upgradeable: false }));
@@ -148,7 +146,6 @@ impl FirmwareWidget {
                         eprintln!("firmware widget error: {}", error_message);
 
                         info_bar.set_visible(true);
-                        // info_bar.set_revealed(true);
                         info_bar_label.set_text(error_message.as_str().into());
 
                         if let Some(entity) = entity {
@@ -193,10 +190,9 @@ impl FirmwareWidget {
                         if upgradeable.get() {
                             let data = data.clone();
                             let upgradeable = upgradeable.clone();
-                            widget
-                                .connect_upgrade_clicked(move || {
-                                    fwupd_dialog(&data, upgradeable.get(), true)
-                                });
+                            widget.connect_upgrade_clicked(move || {
+                                fwupd_dialog(&data, upgradeable.get(), true)
+                            });
                         } else {
                             widget.stack.set_visible(false);
                         }
@@ -453,10 +449,13 @@ fn fwupd_dialog(data: &FwupdDialogData, upgradeable: bool, upgrade_button: bool)
     let response = if !upgrade_button || device.needs_reboot() {
         let &FirmwareInfo { ref latest, .. } = &info;
 
-        let log_entries =
-            releases.iter().rev().map(|release| (release.version.as_ref(), release.description.as_ref()));
+        let log_entries = releases
+            .iter()
+            .rev()
+            .map(|release| (release.version.as_ref(), release.description.as_ref()));
 
-        let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, device.needs_reboot());
+        let dialog =
+            FirmwareUpdateDialog::new(latest, log_entries, upgradeable, device.needs_reboot());
 
         let response = dialog.run();
         dialog.destroy();
@@ -494,10 +493,9 @@ fn s76_system_dialog(data: &System76DialogData, upgradeable: bool) {
     let &DialogData { sender, tx_progress, stack, progress, info } = &shared;
     let &FirmwareInfo { latest, .. } = &info;
 
-    let log_entries = changelog
-        .versions
-        .iter()
-        .map(|version| (version.bios.as_ref(), version.description.as_ref()));
+    let log_entries = changelog.versions.iter().map(|version| {
+        (version.bios.as_ref(), version.description.as_ref().map_or("N/A", |desc| desc.as_ref()))
+    });
 
     let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, true);
 
