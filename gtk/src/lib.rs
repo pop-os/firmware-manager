@@ -17,7 +17,7 @@ use std::{
     error::Error as ErrorTrait,
     process::Command,
     sync::{
-        mpsc::{channel, Receiver, Sender},
+        mpsc::{channel, Receiver, Sender, TryRecvError},
         Arc,
     },
     thread::{self, JoinHandle},
@@ -84,54 +84,15 @@ impl FirmwareWidget {
 
         info_bar.hide();
 
+        let (tx_progress, rx_progress) = channel();
+        progress_handler(rx_progress);
+
         {
             let sender = sender.clone();
             let stack = stack.clone();
 
             let mut entities = Entities::default();
             let mut device_widgets: SecondaryMap<Entity, DeviceWidget> = SecondaryMap::new();
-
-            /// Activates, or deactivates, the movement of progress bars.
-            /// TODO: As soon as glib::WeakRef supports Eq/Hash derives, use WeakRef instead.
-            enum ActivateEvent {
-                Activate(gtk::ProgressBar),
-                Deactivate(gtk::ProgressBar),
-                Clear,
-            }
-
-            let (tx_progress, rx_progress) = channel();
-
-            {
-                // Keeps the progress bars moving.
-                let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
-                let mut remove = Vec::new();
-                gtk::timeout_add(100, move || {
-                    while let Ok(event) = rx_progress.try_recv() {
-                        match event {
-                            ActivateEvent::Activate(widget) => {
-                                active_widgets.insert(widget);
-                            }
-                            ActivateEvent::Deactivate(widget) => {
-                                active_widgets.remove(&widget);
-                            }
-                            ActivateEvent::Clear => {
-                                active_widgets.clear();
-                                return gtk::Continue(true);
-                            }
-                        }
-                    }
-
-                    for widget in remove.drain(..) {
-                        active_widgets.remove(&widget);
-                    }
-
-                    for widget in &active_widgets {
-                        widget.pulse();
-                    }
-
-                    gtk::Continue(true)
-                });
-            }
 
             receiver.attach(None, move |event| {
                 match event {
@@ -231,7 +192,6 @@ impl FirmwareWidget {
                                     gtk::ResponseType::Accept.into()
                                 };
 
-                                eprintln!("received response");
                                 if gtk::ResponseType::Accept == response {
                                     // Exchange the button for a progress bar.
                                     if let (Some(stack), Some(progress)) =
@@ -363,7 +323,9 @@ impl FirmwareWidget {
 
                         stack.set_visible_child(view_devices.as_ref());
                     }
-                    FirmwareSignal::Stop => return glib::Continue(false),
+                    FirmwareSignal::Stop => {
+                        return glib::Continue(false);
+                    }
                 }
 
                 glib::Continue(true)
@@ -409,8 +371,50 @@ impl Drop for FirmwareWidget {
 }
 
 fn reboot() {
-    eprintln!("rebooting");
     if let Err(why) = Command::new("systemctl").arg("reboot").status() {
         eprintln!("failed to reboot: {}", why);
     }
+}
+
+/// Activates, or deactivates, the movement of progress bars.
+/// TODO: As soon as glib::WeakRef supports Eq/Hash derives, use WeakRef instead.
+enum ActivateEvent {
+    Activate(gtk::ProgressBar),
+    Deactivate(gtk::ProgressBar),
+    Clear,
+}
+
+fn progress_handler(rx_progress: Receiver<ActivateEvent>) {
+    let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
+    let mut remove = Vec::new();
+    gtk::timeout_add(100, move || {
+        loop {
+            match rx_progress.try_recv() {
+                Ok(ActivateEvent::Activate(widget)) => {
+                    active_widgets.insert(widget);
+                }
+                Ok(ActivateEvent::Deactivate(widget)) => {
+                    active_widgets.remove(&widget);
+                }
+                Ok(ActivateEvent::Clear) => {
+                    active_widgets.clear();
+                    return gtk::Continue(true);
+                }
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => {
+                    return gtk::Continue(false);
+                }
+            }
+        }
+
+        for widget in remove.drain(..) {
+            active_widgets.remove(&widget);
+        }
+
+        for widget in &active_widgets {
+            widget.pulse();
+        }
+
+        gtk::Continue(true)
+    });
 }
