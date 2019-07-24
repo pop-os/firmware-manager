@@ -17,6 +17,7 @@ endif
 VENDOR ?= 0
 ifneq ($(VENDOR),0)
 	ARGS += --frozen
+	DESKTOP_ARGS += --frozen
 endif
 
 features ?= fwupd system76
@@ -62,7 +63,7 @@ bin-notify $(NOTBINARY): $(STARTUP_DESKTOP) vendor-check
 ## Builds the desktop entry in the target directory.
 
 desktop $(DESKTOP): vendor-check
-	cargo run -p tools --bin desktop-entry $(ARGS) -- \
+	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(APPID) \
 		--name "System76 Firmware" \
 		--icon firmware-manager \
@@ -78,7 +79,7 @@ desktop $(DESKTOP): vendor-check
 		--startup-notify
 
 notify-startup $(STARTUP_DESKTOP): vendor-check
-	cargo run -p tools --bin desktop-entry $(ARGS) -- \
+	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(APPID).Notify \
 		--name "System76 Firmware Check" \
 		--icon firmware-manager \
@@ -97,7 +98,7 @@ $(LIBRARY): $(SOURCES) $(FFI_SOURCES) vendor-check
 ## Builds the pkg-config file necessary to locate the library.
 
 $(PKGCONFIG):
-	cargo run -p tools --bin pkgconfig $(ARGS) -- \
+	cargo run -p tools --bin pkgconfig $(DESKTOP_ARGS) -- \
 		$(PACKAGE) $(libdir) $(includedir)
 
 ## Install commands
@@ -132,6 +133,7 @@ uninstall-ffi:
 ## Cargo Vendoring
 
 vendor:
+	rm .cargo -rf
 	mkdir -p .cargo
 	cargo vendor | head -n -1 > .cargo/config
 	echo 'directory = "vendor"' >> .cargo/config
