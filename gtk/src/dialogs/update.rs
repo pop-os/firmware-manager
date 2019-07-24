@@ -4,7 +4,12 @@ use gtk::prelude::*;
 pub struct FirmwareUpdateDialog(gtk::Dialog);
 
 impl FirmwareUpdateDialog {
-    pub fn new<S: AsRef<str>, I: Iterator<Item = (S, S)>>(version: &str, changelog: I) -> Self {
+    pub fn new<S: AsRef<str>, I: Iterator<Item = (S, S)>>(
+        version: &str,
+        changelog: I,
+        upgradeable: bool,
+        needs_reboot: bool,
+    ) -> Self {
         let changelog_entries = &cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
         };
@@ -34,7 +39,7 @@ impl FirmwareUpdateDialog {
 
         let reboot = cascade! {
             gtk::ButtonBuilder::new()
-                .label("Reboot and Install")
+                .label(if needs_reboot { "Reboot and Install" } else { "Install" })
                 .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
@@ -106,6 +111,8 @@ impl FirmwareUpdateDialog {
             });
         };
 
+        dialog.show_all();
+
         {
             let dialog = dialog.downgrade();
             cancel.connect_clicked(move |_| {
@@ -115,13 +122,15 @@ impl FirmwareUpdateDialog {
             });
         }
 
-        {
+        if upgradeable {
             let dialog = dialog.downgrade();
             reboot.connect_clicked(move |_| {
                 if let Some(dialog) = dialog.upgrade() {
                     dialog.response(gtk::ResponseType::Accept);
                 }
             });
+        } else {
+            reboot.hide();
         }
 
         Self(dialog)

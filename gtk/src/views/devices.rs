@@ -74,7 +74,7 @@ impl DevicesView {
         Self::append(&self.system_firmware, info)
     }
 
-    fn append(container: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
+    fn append(parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
         let device = gtk::LabelBuilder::new().label(info.name.as_ref()).xalign(0.0).build();
 
         let label = cascade! {
@@ -109,26 +109,46 @@ impl DevicesView {
             ..show();
         };
 
-        container.add(&cascade! {
-            gtk::GridBuilder::new()
-                .border_width(12)
-                .column_spacing(12)
-                .build();
-            ..attach(&device, 0, 0, 1, 1);
-            ..attach(&label, 0, 1, 1, 1);
-            ..attach(&stack, 1, 0, 1, 2);
+        let container = cascade! {
+            gtk::EventBox::new();
+            ..add(&cascade! {
+                gtk::GridBuilder::new()
+                    .border_width(12)
+                    .column_spacing(12)
+                    .build();
+                ..attach(&device, 0, 0, 1, 1);
+                ..attach(&label, 0, 1, 1, 1);
+                ..attach(&stack, 1, 0, 1, 2);
+            });
             ..show_all();
-        });
+            ..set_events(gdk::EventMask::BUTTON_PRESS_MASK);
+        };
 
-        DeviceWidget { button, label, progress, stack }
+        parent.add(&container);
+
+        DeviceWidget { container, button, label, progress, stack }
     }
 }
 
 pub struct DeviceWidget {
-    pub button:   gtk::Button,
-    pub label:    gtk::Label,
-    pub progress: gtk::ProgressBar,
-    pub stack:    gtk::Stack,
+    pub container: gtk::EventBox,
+    pub button:    gtk::Button,
+    pub label:     gtk::Label,
+    pub progress:  gtk::ProgressBar,
+    pub stack:     gtk::Stack,
+}
+
+impl DeviceWidget {
+    pub fn connect_clicked<F: Fn() + 'static>(&self, func: F) {
+        self.container.connect_button_press_event(move |_, _| {
+            func();
+            gtk::Inhibit(true)
+        });
+    }
+
+    pub fn connect_upgrade_clicked<F: Fn() + 'static>(&self, func: F) {
+        self.button.connect_clicked(move |_| func());
+    }
 }
 
 fn separator_header(current: &gtk::ListBoxRow, before: Option<&gtk::ListBoxRow>) {

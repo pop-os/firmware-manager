@@ -5,14 +5,12 @@ extern crate err_derive;
 extern crate shrinkwraprs;
 
 #[cfg(feature = "fwupd")]
-pub use fwupd_dbus::Client as FwupdClient;
-
-#[cfg(feature = "fwupd")]
-use fwupd_dbus::{Device as FwupdDevice, Release as FwupdRelease};
+pub use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
 
 #[cfg(feature = "system76")]
-use system76_firmware_daemon::{
-    Changelog, Digest, Error as System76Error, SystemInfo as S76SystemInfo, ThelioIoInfo,
+pub use system76_firmware_daemon::{
+    Changelog as System76Changelog, Digest as System76Digest, Error as System76Error,
+    SystemInfo as S76SystemInfo, ThelioIoInfo,
 };
 
 #[cfg(feature = "system76")]
@@ -20,6 +18,7 @@ pub use system76_firmware_daemon::Client as System76Client;
 
 use slotmap::{DefaultKey as Entity, SecondaryMap, SlotMap};
 use std::{
+    collections::BTreeSet,
     process::Command,
     sync::{mpsc::Receiver, Arc},
 };
@@ -50,10 +49,10 @@ pub enum FirmwareEvent {
     Fwupd(Entity, Arc<FwupdDevice>, Arc<FwupdRelease>),
     Quit,
     #[cfg(feature = "system76")]
-    S76System(Entity, Digest, Box<str>),
+    S76System(Entity, System76Digest, Box<str>),
     Scan,
     #[cfg(feature = "system76")]
-    ThelioIo(Entity, Digest, Box<str>),
+    ThelioIo(Entity, System76Digest, Box<str>),
 }
 
 #[derive(Debug)]
@@ -91,7 +90,7 @@ pub enum FirmwareSignal {
 
     /// Fwupd firmware was discovered.
     #[cfg(feature = "fwupd")]
-    Fwupd(FwupdDevice, Option<Box<[FwupdRelease]>>),
+    Fwupd(FwupdDevice, bool, BTreeSet<FwupdRelease>),
 
     /// Devices are being scanned
     Scanning,
@@ -104,11 +103,11 @@ pub enum FirmwareSignal {
 
     /// System76 system firmware was discovered.
     #[cfg(feature = "system76")]
-    S76System(FirmwareInfo, Digest, Changelog),
+    S76System(FirmwareInfo, System76Digest, System76Changelog),
 
     /// Thelio I/O firmware was discovered.
     #[cfg(feature = "system76")]
-    ThelioIo(FirmwareInfo, Option<Digest>),
+    ThelioIo(FirmwareInfo, Option<System76Digest>),
 
     /// Stops listening
     Stop,
@@ -201,20 +200,9 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 
     for device in devices {
         if device.is_supported() {
-            if let Ok(upgrades) = fwupd.upgrades(&device) {
-                let releases: Box<[FwupdRelease]> = if let Some(current) =
-                    upgrades.iter().position(|v| v.version == device.version)
-                {
-                    Box::from(Vec::from(&upgrades[current..]))
-                } else if let Some(upgrade) = upgrades.into_iter().last() {
-                    Box::from([upgrade])
-                } else {
-                    continue;
-                };
-
-                sender(FirmwareSignal::Fwupd(device, Some(releases)));
-            } else {
-                sender(FirmwareSignal::Fwupd(device, None));
+            if let Ok(releases) = fwupd.releases(&device) {
+                let upgradeable = releases.iter().rev().next().map_or(false, |v| v.version != device.version);
+                sender(FirmwareSignal::Fwupd(device, upgradeable, releases.into()));
             }
         }
     }
@@ -282,7 +270,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                 let digest = &mut Some(digest);
                 for (num, (_, revision)) in list.iter().enumerate() {
                     let fw = FirmwareInfo {
-                        name:    format!("Thelio I/O #{}", num  + 1).into(),
+                        name:    format!("Thelio I/O #{}", num + 1).into(),
                         current: Box::from(if revision.is_empty() {
                             "N/A"
                         } else {
