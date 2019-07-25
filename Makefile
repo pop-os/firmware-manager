@@ -22,7 +22,7 @@ endif
 
 features ?= fwupd system76
 
-export APPID = com.system76.FirmwareManager
+APPID = com.system76.FirmwareManager
 
 GTKPROJ = gtk/Cargo.toml
 GTKFFIPROJ = gtk/ffi/Cargo.toml
@@ -51,6 +51,13 @@ clean:
 
 distclean: clean
 	rm -rf .cargo vendor vendor.tar.xz target
+
+
+## Developer tools
+
+clippy:
+	cargo clippy --manifest-path $(GTKPROJ) $(ARGS) --features '$(features)'
+	cargo clippy --manifest-path $(NOTPROJ) $(ARGS) --features '$(features)'
 
 ## Building the binaries
 

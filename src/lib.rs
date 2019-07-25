@@ -49,13 +49,17 @@ pub enum FirmwareEvent {
     /// Upgrade the firmware of a fwupd-compatible device.
     #[cfg(feature = "fwupd")]
     Fwupd(Entity, Arc<FwupdDevice>, Arc<FwupdRelease>),
+
     /// Stop processing events.
     Stop,
+
     /// Upgrade system firmware for System76 systems.
     #[cfg(feature = "system76")]
     S76System(Entity, System76Digest, Box<str>),
+
     /// Search for available firmware devices.
     Scan,
+
     /// Upgrade the firmware of Thelio I/O boarods.
     #[cfg(feature = "system76")]
     ThelioIo(Entity, System76Digest, Box<str>),
@@ -64,9 +68,17 @@ pub enum FirmwareEvent {
 /// Information about a device and its current and latest firmware.
 #[derive(Debug)]
 pub struct FirmwareInfo {
-    pub name:    Box<str>,
+    /// The name of this device.
+    pub name: Box<str>,
+
+    /// The currently-installed version.
     pub current: Box<str>,
-    pub latest:  Box<str>,
+
+    /// The latest version of firmware for this device.
+    pub latest: Box<str>,
+
+    // The time required for this firmware to be flashed, in seconds.
+    pub install_duration: u32,
 }
 
 #[derive(Debug, Default, Shrinkwrap)]
@@ -105,17 +117,39 @@ impl Entities {
     pub fn is_thelio_io(&self, entity: Entity) -> bool { self.thelio_io.contains_key(entity) }
 }
 
+/// A signal sent when a fwupd-compatible device has been discovered.
+#[cfg(feature = "fwupd")]
+#[derive(Debug)]
+pub struct FwupdSignal {
+    pub info:        FirmwareInfo,
+    pub device:      FwupdDevice,
+    pub upgradeable: bool,
+    pub releases:    BTreeSet<FwupdRelease>,
+}
+
 #[derive(Debug)]
 pub enum FirmwareSignal {
+    /// A device has initiated the flashing process.
+    DeviceFlashing(Entity),
+
     /// A device was updated
     DeviceUpdated(Entity, Box<str>),
+
+    /// Signals that the entity's firmware is being downloaded.
+    DownloadBegin(Entity, u64),
+
+    /// Signals completion of an entity's firmware download.
+    DownloadComplete(Entity),
+
+    /// Progress updates on firmware downloads.
+    DownloadUpdate(Entity, usize),
 
     /// An error occurred
     Error(Option<Entity>, Error),
 
     /// Fwupd firmware was discovered.
     #[cfg(feature = "fwupd")]
-    Fwupd(FwupdDevice, bool, BTreeSet<FwupdRelease>),
+    Fwupd(FwupdSignal),
 
     /// Devices are being scanned
     Scanning,
@@ -176,7 +210,28 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
             FirmwareEvent::Fwupd(entity, device, release) => {
                 let flags = fwupd_dbus::InstallFlags::empty();
                 let event = match fwupd.as_ref().map(|fwupd| {
-                    fwupd.update_device_with_release(http_client, &device, &release, flags)
+                    fwupd.update_device_with_release(
+                        http_client,
+                        &device,
+                        &release,
+                        flags,
+                        Some(|download_event| {
+                            use fwupd_dbus::FlashEvent::*;
+                            let event = match download_event {
+                                DownloadUpdate(progress) => {
+                                    FirmwareSignal::DownloadUpdate(entity, progress)
+                                }
+                                DownloadInitiate(size) => {
+                                    FirmwareSignal::DownloadBegin(entity, size)
+                                }
+                                DownloadComplete => FirmwareSignal::DownloadComplete(entity),
+                                FlashInProgress => FirmwareSignal::DeviceFlashing(entity),
+                                VerifyingChecksum => return,
+                            };
+
+                            sender(event);
+                        }),
+                    )
                 }) {
                     Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity, release.version.clone()),
                     Some(Err(why)) => FirmwareSignal::Error(Some(entity), why.into()),
@@ -187,6 +242,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
             }
             #[cfg(feature = "system76")]
             FirmwareEvent::S76System(entity, digest, _latest) => {
+                sender(FirmwareSignal::DeviceFlashing(entity));
                 match s76.as_ref().map(|client| client.schedule(&digest)) {
                     Some(Ok(_)) => sender(FirmwareSignal::SystemScheduled),
                     Some(Err(why)) => sender(FirmwareSignal::Error(Some(entity), why.into())),
@@ -195,7 +251,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
             }
             #[cfg(feature = "system76")]
             FirmwareEvent::ThelioIo(entity, digest, latest) => {
-                eprintln!("updating thelio io");
+                sender(FirmwareSignal::DeviceFlashing(entity));
                 let event = match s76.as_ref().map(|client| client.thelio_io_update(&digest)) {
                     Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity, latest),
                     Some(Err(why)) => FirmwareSignal::Error(Some(entity), why.into()),
@@ -231,7 +287,20 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
             if let Ok(releases) = fwupd.releases(&device) {
                 let upgradeable =
                     releases.iter().rev().next().map_or(false, |v| v.version != device.version);
-                sender(FirmwareSignal::Fwupd(device, upgradeable, releases.into()));
+
+                let latest = releases.iter().last().expect("no releases");
+
+                sender(FirmwareSignal::Fwupd(FwupdSignal {
+                    info: FirmwareInfo {
+                        name:             [&device.vendor, " ", &device.name].concat().into(),
+                        current:          device.version.clone(),
+                        latest:           latest.version.clone(),
+                        install_duration: latest.install_duration,
+                    },
+                    device,
+                    upgradeable,
+                    releases,
+                }));
             }
         }
     }
@@ -273,15 +342,16 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
         Ok(current) => match client.download() {
             Ok(S76SystemInfo { digest, changelog }) => {
                 let fw = FirmwareInfo {
-                    name:    current.model,
-                    current: current.version,
-                    latest:  changelog
+                    name:             current.model,
+                    current:          current.version,
+                    latest:           changelog
                         .versions
                         .iter()
                         .last()
                         .expect("empty changelog")
                         .bios
                         .clone(),
+                    install_duration: 1,
                 };
 
                 FirmwareSignal::S76System(fw, digest, changelog)
@@ -301,13 +371,14 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                 let digest = &mut Some(digest);
                 for (num, (_, revision)) in list.iter().enumerate() {
                     let fw = FirmwareInfo {
-                        name:    format!("Thelio I/O #{}", num + 1).into(),
-                        current: Box::from(if revision.is_empty() {
+                        name:             format!("Thelio I/O #{}", num + 1).into(),
+                        current:          Box::from(if revision.is_empty() {
                             "N/A"
                         } else {
                             revision.as_str()
                         }),
-                        latest:  Box::from(revision.as_str()),
+                        latest:           Box::from(revision.as_str()),
+                        install_duration: 15,
                     };
 
                     let event = FirmwareSignal::ThelioIo(fw, digest.take());

@@ -1,4 +1,4 @@
-use crate::{ActivateEvent, FirmwareEvent, FirmwareInfo};
+use crate::{FirmwareEvent, FirmwareInfo};
 use std::sync::mpsc::Sender;
 
 #[cfg(feature = "fwupd")]
@@ -19,9 +19,8 @@ pub use self::update::*;
 
 /// Senders and widgets shared by all device dialogs.
 pub(crate) struct DialogData {
-    pub sender:      Sender<FirmwareEvent>,
-    pub tx_progress: Sender<ActivateEvent>,
-    pub stack:       glib::WeakRef<gtk::Stack>,
-    pub progress:    glib::WeakRef<gtk::ProgressBar>,
-    pub info:        FirmwareInfo,
+    pub sender:   Sender<FirmwareEvent>,
+    pub stack:    glib::WeakRef<gtk::Stack>,
+    pub progress: glib::WeakRef<gtk::ProgressBar>,
+    pub info:     FirmwareInfo,
 }

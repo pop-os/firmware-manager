@@ -1,4 +1,4 @@
-use crate::traits::DynamicGtkResize;
+use crate::{traits::DynamicGtkResize, widgets::DeviceWidget};
 use firmware_manager::FirmwareInfo;
 use gtk::prelude::*;
 use std::num::NonZeroU8;
@@ -75,79 +75,9 @@ impl DevicesView {
     }
 
     fn append(parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
-        let device = gtk::LabelBuilder::new().label(info.name.as_ref()).xalign(0.0).build();
-
-        let label = cascade! {
-            gtk::LabelBuilder::new()
-                .label(info.current.as_ref())
-                .xalign(0.0)
-                .build();
-            ..get_style_context().add_class(&gtk::STYLE_CLASS_DIM_LABEL);
-        };
-
-        let button = cascade! {
-            gtk::ButtonBuilder::new()
-                .label("Update")
-                .halign(gtk::Align::End)
-                .hexpand(true)
-                .visible(info.current != info.latest)
-                .build();
-            ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
-        };
-
-        let progress = cascade! {
-            gtk::ProgressBarBuilder::new().pulse_step(0.33).build();
-            ..pulse();
-            ..show();
-        };
-
-        let stack = cascade! {
-            gtk::Stack::new();
-            ..add(&button);
-            ..add(&progress);
-            ..set_visible_child(&button);
-            ..show();
-        };
-
-        let container = cascade! {
-            gtk::EventBox::new();
-            ..add(&cascade! {
-                gtk::GridBuilder::new()
-                    .border_width(12)
-                    .column_spacing(12)
-                    .build();
-                ..attach(&device, 0, 0, 1, 1);
-                ..attach(&label, 0, 1, 1, 1);
-                ..attach(&stack, 1, 0, 1, 2);
-            });
-            ..show_all();
-            ..set_events(gdk::EventMask::BUTTON_PRESS_MASK);
-        };
-
-        parent.add(&container);
-
-        DeviceWidget { container, button, label, progress, stack }
-    }
-}
-
-pub struct DeviceWidget {
-    pub container: gtk::EventBox,
-    pub button:    gtk::Button,
-    pub label:     gtk::Label,
-    pub progress:  gtk::ProgressBar,
-    pub stack:     gtk::Stack,
-}
-
-impl DeviceWidget {
-    pub fn connect_clicked<F: Fn() + 'static>(&self, func: F) {
-        self.container.connect_button_press_event(move |_, _| {
-            func();
-            gtk::Inhibit(true)
-        });
-    }
-
-    pub fn connect_upgrade_clicked<F: Fn() + 'static>(&self, func: F) {
-        self.button.connect_clicked(move |_| func());
+        let widget = DeviceWidget::new(info);
+        parent.add(widget.as_ref());
+        widget
     }
 }
 

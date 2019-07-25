@@ -10,9 +10,7 @@ impl FirmwareUpdateDialog {
         upgradeable: bool,
         needs_reboot: bool,
     ) -> Self {
-        let changelog_entries = &cascade! {
-            gtk::Box::new(gtk::Orientation::Vertical, 12);
-        };
+        let changelog_entries = &gtk::Box::new(gtk::Orientation::Vertical, 12);
 
         changelog.for_each(|(version, entry)| {
             let markdown = html2runes::markdown::convert_string(entry.as_ref());
@@ -35,7 +33,7 @@ impl FirmwareUpdateDialog {
             ["Firmware version ", version.trim(), " is available. Fixes and features include:"]
                 .concat();
 
-        let cancel = gtk::Button::new_with_label("Cancel".into());
+        let cancel = gtk::Button::new_with_label("Cancel");
 
         let reboot = cascade! {
             gtk::ButtonBuilder::new()

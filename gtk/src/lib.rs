@@ -6,15 +6,16 @@ extern crate shrinkwraprs;
 mod dialogs;
 mod traits;
 mod views;
+mod widgets;
 
-use self::{dialogs::*, views::*};
+use self::{dialogs::*, views::*, widgets::*};
 use firmware_manager::*;
 
 use gtk::{self, prelude::*};
 use slotmap::{DefaultKey as Entity, SecondaryMap};
 use std::{
     cell::{Cell, RefCell},
-    collections::{BTreeSet, HashSet},
+    collections::HashSet,
     error::Error as ErrorTrait,
     iter,
     process::Command,
@@ -68,7 +69,7 @@ impl FirmwareWidget {
         };
 
         if let Some(area) = info_bar.get_content_area() {
-            if let Some(area) = area.downcast::<gtk::Container>().ok() {
+            if let Ok(area) = area.downcast::<gtk::Container>() {
                 area.add(&info_bar_label);
             }
         }
@@ -103,6 +104,8 @@ impl FirmwareWidget {
             // implementation.
             let mut device_widget_storage: SecondaryMap<Entity, DeviceWidget> = SecondaryMap::new();
             let mut upgradeable_storage: SecondaryMap<Entity, Rc<Cell<bool>>> = SecondaryMap::new();
+            let mut firmware_download_storage: SecondaryMap<Entity, (u64, u64)> =
+                SecondaryMap::new();
 
             // Miscellaneous state that will be captured by the main event loop's move closure.
             let mut devices_found = false;
@@ -111,6 +114,16 @@ impl FirmwareWidget {
 
             receiver.attach(None, move |event| {
                 match event {
+                    // When a device begins flashing, we can begin moving the progress bar based on
+                    // its duration.
+                    FirmwareSignal::DeviceFlashing(entity) => {
+                        let widget = &device_widget_storage[entity];
+                        let message =
+                            if entities.is_system(entity) { "Scheduling" } else { "Flashing" };
+                        widget.progress.set_text(message.into());
+                        widget.progress.set_fraction(0.0);
+                        let _ = tx_progress.send(ActivateEvent::Activate(widget.progress.clone()));
+                    }
                     // An event that occurs when firmware has successfully updated.
                     FirmwareSignal::DeviceUpdated(entity, latest) => {
                         let mut device_continue = true;
@@ -148,6 +161,26 @@ impl FirmwareWidget {
                             }
                         }
                     }
+                    // Firmware for a device has begun downloading.
+                    FirmwareSignal::DownloadBegin(entity, size) => {
+                        let widget = &device_widget_storage[entity];
+                        firmware_download_storage.insert(entity, (0, size));
+                        widget.progress.set_text("Downloading".into());
+                        widget.progress.set_fraction(0.0);
+                    }
+                    // Firmware for a device has finished downloading.
+                    FirmwareSignal::DownloadComplete(entity) => {
+                        firmware_download_storage.remove(entity);
+                        let widget = &device_widget_storage[entity];
+                        widget.progress.set_fraction(1.0);
+                    }
+                    // Update the progress for the firmware being downloaded.
+                    FirmwareSignal::DownloadUpdate(entity, downloaded) => {
+                        let widget = &device_widget_storage[entity];
+                        let progress = &mut firmware_download_storage[entity];
+                        progress.0 += downloaded as u64;
+                        widget.progress.set_fraction(progress.0 as f64 / progress.1 as f64);
+                    }
                     // An error occurred in the background thread, which we shall display in the UI.
                     FirmwareSignal::Error(entity, why) => {
                         // Convert the error and its causes into a string.
@@ -161,23 +194,19 @@ impl FirmwareWidget {
                         eprintln!("firmware widget error: {}", error_message);
 
                         info_bar.set_visible(true);
-                        info_bar_label.set_text(error_message.as_str().into());
+                        info_bar_label.set_text(error_message.as_str());
 
                         if let Some(entity) = entity {
                             let widget = &device_widget_storage[entity];
                             widget.stack.set_visible_child(&widget.button);
+                            let _ = tx_progress
+                                .send(ActivateEvent::Deactivate(widget.progress.clone()));
                         }
                     }
                     // An event that occurs when fwupd firmware is found.
                     #[cfg(feature = "fwupd")]
-                    FirmwareSignal::Fwupd(device, upgradeable, releases) => {
+                    FirmwareSignal::Fwupd(FwupdSignal { info, device, upgradeable, releases }) => {
                         devices_found = true;
-                        let info = FirmwareInfo {
-                            name:    [&device.vendor, " ", &device.name].concat().into(),
-                            current: device.version.clone(),
-                            latest:  releases.iter().last().expect("no releases").version.clone(),
-                        };
-
                         let entity = entities.create();
 
                         let widget = if device.needs_reboot() {
@@ -193,7 +222,6 @@ impl FirmwareWidget {
                             entity,
                             shared: DialogData {
                                 sender: sender.clone(),
-                                tx_progress: tx_progress.clone(),
                                 stack: widget.stack.downgrade(),
                                 progress: widget.progress.downgrade(),
                                 info,
@@ -260,7 +288,6 @@ impl FirmwareWidget {
                             changelog,
                             shared: DialogData {
                                 sender: sender.clone(),
-                                tx_progress: tx_progress.clone(),
                                 stack: widget.stack.downgrade(),
                                 progress: widget.progress.downgrade(),
                                 info,
@@ -456,7 +483,7 @@ enum ActivateEvent {
 fn progress_handler(rx_progress: Receiver<ActivateEvent>) {
     let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
     let mut remove = Vec::new();
-    gtk::timeout_add(100, move || {
+    gtk::timeout_add(1000, move || {
         loop {
             match rx_progress.try_recv() {
                 Ok(ActivateEvent::Activate(widget)) => {
@@ -481,7 +508,8 @@ fn progress_handler(rx_progress: Receiver<ActivateEvent>) {
         }
 
         for widget in &active_widgets {
-            widget.pulse();
+            let new_value = widget.get_fraction() + widget.get_pulse_step();
+            widget.set_fraction(if new_value > 1.0 { 1.0 } else { new_value });
         }
 
         gtk::Continue(true)

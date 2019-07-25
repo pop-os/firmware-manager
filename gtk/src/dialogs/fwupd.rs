@@ -1,7 +1,7 @@
-use crate::{ActivateEvent, Entity, FirmwareEvent, FirmwareInfo, FwupdDevice, FwupdRelease};
 use super::{DialogData, FirmwareUpdateDialog};
-use std::{collections::BTreeSet, sync::Arc};
+use crate::{Entity, FirmwareEvent, FirmwareInfo, FwupdDevice, FwupdRelease};
 use gtk::{self, prelude::*};
+use std::{collections::BTreeSet, sync::Arc};
 
 pub(crate) struct FwupdDialogData {
     pub entity:   Entity,
@@ -12,7 +12,7 @@ pub(crate) struct FwupdDialogData {
 
 pub(crate) fn fwupd_dialog(data: &FwupdDialogData, upgradeable: bool, upgrade_button: bool) {
     let &FwupdDialogData { entity, device, releases, shared } = &data;
-    let &DialogData { sender, tx_progress, stack, progress, info } = &shared;
+    let &DialogData { sender, stack, progress, info } = &shared;
 
     let response = if !upgrade_button || device.needs_reboot() {
         let &FirmwareInfo { ref latest, .. } = &info;
@@ -29,14 +29,14 @@ pub(crate) fn fwupd_dialog(data: &FwupdDialogData, upgradeable: bool, upgrade_bu
         dialog.destroy();
         response
     } else {
-        gtk::ResponseType::Accept.into()
+        gtk::ResponseType::Accept
     };
 
     if gtk::ResponseType::Accept == response {
         // Exchange the button for a progress bar.
         if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
             stack.set_visible_child(&progress);
-            let _ = tx_progress.send(ActivateEvent::Activate(progress));
+            progress.set_text("Queued for update".into());
         }
 
         let _ = sender.send(FirmwareEvent::Fwupd(

@@ -27,7 +27,7 @@ fn main() {
         let weak_widget = Rc::downgrade(&widget);
         let headerbar = cascade! {
             gtk::HeaderBarBuilder::new()
-                .title("System76 Firmware Manager".into())
+                .title("System76 Firmware Manager")
                 .show_close_button(true)
                 .build();
             ..show();
@@ -52,7 +52,7 @@ fn main() {
         let _window = cascade! {
             gtk::ApplicationWindowBuilder::new()
                 .application(app)
-                .icon_name("firmware-manager".into())
+                .icon_name("firmware-manager")
                 .window_position(gtk::WindowPosition::Center)
                 .default_width(768)
                 .default_height(576)
