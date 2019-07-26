@@ -8,9 +8,6 @@ edition = "2018"
 system76 = []
 fwupd = []
 
-[build-dependencies]
-cdylib-link-lines = "0.1"
-
 [dependencies]
 firmware-manager-gtk = { path = "../" }
 glib = "0.8"

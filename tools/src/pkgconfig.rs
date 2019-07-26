@@ -8,7 +8,7 @@ const PKGCONFIG: &str = r#"Name: ${name}
 Description: {description}
 Version: {version}
 Cflags: -I${includedir}
-Libs: -L${libdir} -l${name}_gtk"#;
+Libs: -L${libdir} -l${name}"#;
 
 fn main() -> io::Result<()> {
     let mut args = env::args();

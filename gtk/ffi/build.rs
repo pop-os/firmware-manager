@@ -1,8 +1,6 @@
 use std::{env, fs::File, io::Write, path::PathBuf};
 
 fn main() {
-    cdylib_link_lines::metabuild();
-
     let target_dir = PathBuf::from("../../target");
 
     let pkg_config = format!(
