@@ -24,6 +24,7 @@ impl DevicesView {
             });
         };
 
+        let upper = system_firmware.downgrade();
         let device_firmware = cascade! {
             gtk::ListBox::new();
             ..set_selection_mode(gtk::SelectionMode::None);
@@ -32,7 +33,44 @@ impl DevicesView {
                     let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
                 }
             });
+            ..connect_key_press_event(move |listbox, event| {
+                gtk::Inhibit(
+                    if event.get_keyval() == gdk::enums::key::Up {
+                        listbox.get_children()
+                            .into_iter()
+                            .filter_map(|widget| widget.downcast::<gtk::ListBoxRow>().ok())
+                            .next()
+                            .and_then(|row| if row.has_focus() { upper.upgrade() } else { None })
+                            .and_then(|upper| upper.get_children().into_iter().last())
+                            .map_or(false, |child| {
+                                child.grab_focus();
+                                true
+                            })
+                    } else {
+                        false
+                    }
+                )
+            });
         };
+
+        let lower = device_firmware.downgrade();
+        system_firmware.connect_key_press_event(move |listbox, event| {
+            gtk::Inhibit(if event.get_keyval() == gdk::enums::key::Down {
+                listbox
+                    .get_children()
+                    .into_iter()
+                    .filter_map(|widget| widget.downcast::<gtk::ListBoxRow>().ok())
+                    .last()
+                    .and_then(|row| if row.has_focus() { lower.upgrade() } else { None })
+                    .and_then(|lower| lower.get_children().into_iter().next())
+                    .map_or(false, |child| {
+                        child.grab_focus();
+                        true
+                    })
+            } else {
+                false
+            })
+        });
 
         let layout: gtk::Box = cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
