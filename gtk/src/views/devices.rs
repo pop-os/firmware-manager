@@ -17,11 +17,21 @@ impl DevicesView {
             gtk::ListBox::new();
             ..set_margin_bottom(12);
             ..set_selection_mode(gtk::SelectionMode::None);
+            ..connect_row_activated(move |_, row| {
+                if let Some(widget) = row.get_child() {
+                    let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
+                }
+            });
         };
 
         let device_firmware = cascade! {
             gtk::ListBox::new();
             ..set_selection_mode(gtk::SelectionMode::None);
+            ..connect_row_activated(move |_, row| {
+                if let Some(widget) = row.get_child() {
+                    let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
+                }
+            });
         };
 
         let layout: gtk::Box = cascade! {

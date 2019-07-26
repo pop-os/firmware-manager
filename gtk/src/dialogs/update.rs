@@ -10,7 +10,11 @@ impl FirmwareUpdateDialog {
         upgradeable: bool,
         needs_reboot: bool,
     ) -> Self {
-        let changelog_entries = &gtk::Box::new(gtk::Orientation::Vertical, 12);
+        let changelog_entries = &cascade! {
+            gtk::Box::new(gtk::Orientation::Vertical, 12);
+            ..set_margin_top(6);
+            ..set_margin_bottom(6);
+        };
 
         changelog.for_each(|(version, entry)| {
             let markdown = html2runes::markdown::convert_string(entry.as_ref());
@@ -83,7 +87,7 @@ impl FirmwareUpdateDialog {
                     .build()
             );
             ..add(&cascade! {
-                gtk::Box::new(gtk::Orientation::Vertical, 12);
+                gtk::Box::new(gtk::Orientation::Vertical, 6);
                 ..add(
                     &gtk::LabelBuilder::new()
                         .label(&*header_text)

@@ -81,11 +81,25 @@ impl FirmwareWidget {
             ..set_visible_child(view_empty.as_ref());
         };
 
-        let container = cascade! {
-            gtk::Overlay::new();
-            ..add_overlay(&info_bar);
-            ..add(&stack);
-            ..show_all();
+        let container = {
+            let sender = sender.clone();
+            let container = cascade! {
+                gtk::Overlay::new();
+                ..add_overlay(&info_bar);
+                ..add(&stack);
+                ..show_all();
+                ..set_can_default(true);
+                ..connect_key_press_event(move |_, event| {
+                    gtk::Inhibit(if event.get_keyval() == gdk::enums::key::F5 {
+                        let _ = sender.send(FirmwareEvent::Scan);
+                        true
+                    } else {
+                        false
+                    })
+                });
+            };
+
+            container
         };
 
         info_bar.hide();
@@ -199,6 +213,7 @@ impl FirmwareWidget {
                         if let Some(entity) = entity {
                             let widget = &device_widget_storage[entity];
                             widget.stack.set_visible_child(&widget.button);
+                            firmware_download_storage.remove(entity);
                             let _ = tx_progress
                                 .send(ActivateEvent::Deactivate(widget.progress.clone()));
                         }
@@ -357,18 +372,18 @@ impl FirmwareWidget {
                         }
 
                         {
+                            // When the device's widget is clicked.
                             let sender = sender.clone();
                             let tx_progress = tx_progress.clone();
                             let stack = widget.stack.downgrade();
                             let progress = widget.progress.downgrade();
-                            let upgradeable = thelio_io_upgradeable.clone();
                             let data = thelio_io_upgradeable.clone();
                             let info = info.clone();
                             widget.connect_clicked(move || {
                                 let dialog = FirmwareUpdateDialog::new(
                                     info.latest.as_ref(),
                                     iter::once((info.latest.as_ref(), "")),
-                                    upgradeable.borrow().upgradeable,
+                                    data.borrow().upgradeable,
                                     false,
                                 );
 

@@ -4,7 +4,7 @@ use gtk::prelude::*;
 #[derive(Shrinkwrap)]
 pub struct DeviceWidget {
     #[shrinkwrap(main_field)]
-    pub container: gtk::EventBox,
+    pub container: gtk::Container,
     pub button: gtk::Button,
     pub label: gtk::Label,
     pub progress: gtk::ProgressBar,
@@ -51,7 +51,10 @@ impl DeviceWidget {
         };
 
         let container = cascade! {
-            gtk::EventBox::new();
+            gtk::EventBoxBuilder::new()
+                .can_focus(false)
+                .events(gdk::EventMask::BUTTON_PRESS_MASK)
+                .build();
             ..add(&cascade! {
                 gtk::GridBuilder::new()
                     .border_width(12)
@@ -62,10 +65,15 @@ impl DeviceWidget {
                 ..attach(&stack, 1, 0, 1, 2);
             });
             ..show_all();
-            ..set_events(gdk::EventMask::BUTTON_PRESS_MASK);
         };
 
-        DeviceWidget { container, button, label, progress, stack }
+        DeviceWidget {
+            container: container.upcast::<gtk::Container>(),
+            button,
+            label,
+            progress,
+            stack,
+        }
     }
 
     pub fn connect_clicked<F: Fn() + 'static>(&self, func: F) {
