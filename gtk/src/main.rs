@@ -70,6 +70,16 @@ fn main() {
 
                 Inhibit(false)
             });
+            ..connect_key_press_event(move |window, event| {
+                use gdk::enums::key;
+                gtk::Inhibit(match event.get_keyval() {
+                    key::q if event.get_state().contains(gdk::ModifierType::CONTROL_MASK) => {
+                        let _ = window.emit("delete-event", &[&gdk::Event::new(gdk::EventType::Delete)]);
+                        true
+                    }
+                    _ => false
+                })
+            });
         };
     });
 
