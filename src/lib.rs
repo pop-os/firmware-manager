@@ -251,6 +251,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
             }
             #[cfg(feature = "system76")]
             FirmwareEvent::ThelioIo(entity, digest, latest) => {
+                eprintln!("updating thelio I/O to {}", latest);
                 sender(FirmwareSignal::DeviceFlashing(entity));
                 let event = match s76.as_ref().map(|client| client.thelio_io_update(&digest)) {
                     Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity, latest),
@@ -371,17 +372,17 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     let event = match client.thelio_io_list() {
         Ok(list) => match client.thelio_io_download() {
             Ok(info) => {
-                let ThelioIoInfo { digest, .. } = info;
+                let ThelioIoInfo { digest, revision } = info;
                 let digest = &mut Some(digest);
-                for (num, (_, revision)) in list.iter().enumerate() {
+                for (num, (_, device_revision)) in list.iter().enumerate() {
                     let fw = FirmwareInfo {
                         name:             format!("Thelio I/O #{}", num + 1).into(),
-                        current:          Box::from(if revision.is_empty() {
+                        current:          Box::from(if device_revision.is_empty() {
                             "N/A"
                         } else {
-                            revision.as_str()
+                            device_revision.as_str()
                         }),
-                        latest:           Box::from(revision.as_str()),
+                        latest:           revision.clone(),
                         install_duration: 15,
                     };
 
