@@ -36,7 +36,7 @@ impl DeviceWidget {
         let progress = cascade! {
             gtk::ProgressBarBuilder::new()
                 .show_text(true)
-                .pulse_step(1.0 / f64::from(info.install_duration))
+                .pulse_step(0.1 / f64::from(info.install_duration))
                 .build();
             ..pulse();
             ..show();
