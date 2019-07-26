@@ -317,6 +317,10 @@ pub fn fwupd_updates(
     const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
 
     for remote in client.remotes()? {
+        if !remote.enabled {
+            continue;
+        }
+
         if let fwupd_dbus::RemoteKind::Download = remote.kind {
             let update = remote
                 .time_since_last_update()
