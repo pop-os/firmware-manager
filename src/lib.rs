@@ -328,7 +328,7 @@ pub fn fwupd_updates(
                 .map_or(true, |since| since > Duration::from_secs(14 * SECONDS_IN_DAY));
 
             if update {
-                eprintln!("updating remote cache for {}", remote.filename_cache);
+                eprintln!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
                 if let Err(why) = remote.update_metadata(client, http) {
                     eprintln!("failed to fetch updates from {}: {}", remote.filename_cache, why);
                 }
@@ -352,7 +352,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                     latest:           changelog
                         .versions
                         .iter()
-                        .last()
+                        .next()
                         .expect("empty changelog")
                         .bios
                         .clone(),
