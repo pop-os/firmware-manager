@@ -57,7 +57,7 @@ fn notify() {
         .icon("firmware-manager")
         .appname("firmware-manager")
         .action("default", "default")
-        .hint(NotificationHint::Resident(true))
+        // .hint(NotificationHint::Resident(true))
         .timeout(Timeout::Never)
         .show()
         .expect("failed to show desktop notification")
