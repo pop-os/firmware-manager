@@ -235,6 +235,8 @@ impl FirmwareWidget {
                     let _ = state.progress_sender.send(ActivateEvent::Clear);
 
                     state.widgets.stack.hide();
+                    state.widgets.view_devices.hide_systems();
+                    state.widgets.view_devices.hide_devices();
                 }
                 // Signal is received when scanning has completed.
                 Firmware(ScanningComplete) => {

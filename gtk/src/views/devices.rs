@@ -10,12 +10,14 @@ pub struct DevicesView {
     device_firmware: gtk::ListBox,
     device_header: gtk::Label,
     system_firmware: gtk::ListBox,
+    system_header: gtk::Label,
 }
 
 impl DevicesView {
     pub fn new() -> Self {
         let system_firmware = cascade! {
             gtk::ListBox::new();
+            ..set_no_show_all(true);
             ..set_margin_bottom(12);
             ..set_selection_mode(gtk::SelectionMode::None);
             ..connect_row_activated(move |_, row| {
@@ -32,6 +34,7 @@ impl DevicesView {
         let upper = system_firmware.downgrade();
         let device_firmware = cascade! {
             gtk::ListBox::new();
+            ..set_no_show_all(true);
             ..set_selection_mode(gtk::SelectionMode::None);
             ..connect_row_activated(move |_, row| {
                 let widget = row.get_child()
@@ -81,8 +84,16 @@ impl DevicesView {
             })
         });
 
+        let system_header = cascade! {
+            gtk::Label::new("<b>System Firmware</b>".into());
+            ..set_no_show_all(true);
+            ..set_use_markup(true);
+            ..set_xalign(0.0);
+        };
+
         let device_header = cascade! {
             gtk::Label::new("<b>Device Firmware</b>".into());
+            ..set_no_show_all(true);
             ..set_use_markup(true);
             ..set_xalign(0.0);
         };
@@ -91,11 +102,7 @@ impl DevicesView {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_halign(gtk::Align::Center);
             ..set_margin_top(24);
-            ..add(&cascade! {
-                gtk::Label::new("<b>System Firmware</b>".into());
-                ..set_use_markup(true);
-                ..set_xalign(0.0);
-            });
+            ..add(&system_header);
             ..add(&system_firmware);
             ..add(&device_header);
             ..add(&device_firmware);
@@ -117,7 +124,13 @@ impl DevicesView {
             ..dynamic_resize(layout, NonZeroU8::new(66), None);
         };
 
-        Self { container: container.upcast(), device_firmware, device_header, system_firmware }
+        Self {
+            container: container.upcast(),
+            device_firmware,
+            device_header,
+            system_firmware,
+            system_header,
+        }
     }
 
     pub fn clear(&self) {
@@ -126,11 +139,33 @@ impl DevicesView {
     }
 
     pub fn device(&self, info: &FirmwareInfo) -> DeviceWidget {
+        self.show_devices();
         Self::append(&self.device_firmware, info)
     }
 
     pub fn system(&self, info: &FirmwareInfo) -> DeviceWidget {
+        self.show_systems();
         Self::append(&self.system_firmware, info)
+    }
+
+    pub fn hide_devices(&self) {
+        self.device_firmware.hide();
+        self.device_header.hide();
+    }
+
+    pub fn hide_systems(&self) {
+        self.system_firmware.hide();
+        self.system_header.hide();
+    }
+
+    fn show_devices(&self) {
+        self.device_firmware.show();
+        self.device_header.show();
+    }
+
+    fn show_systems(&self) {
+        self.system_firmware.show();
+        self.system_header.show();
     }
 
     fn append(parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
