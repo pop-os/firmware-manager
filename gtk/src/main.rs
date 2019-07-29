@@ -30,7 +30,6 @@ fn main() {
                 .title("System76 Firmware Manager")
                 .show_close_button(true)
                 .build();
-            ..show();
             ..pack_end(&cascade! {
                 gtk::ButtonBuilder::new()
                     .image(gtk::ImageBuilder::new()
@@ -45,7 +44,6 @@ fn main() {
                         widget.scan();
                     }
                 });
-                ..show();
             });
         };
 
@@ -60,7 +58,7 @@ fn main() {
             ..set_keep_above(true);
             ..set_titlebar(Some(&headerbar));
             ..add(widget.container());
-            ..show();
+            ..show_all();
             ..connect_delete_event(move |window, _| {
                 window.destroy();
 

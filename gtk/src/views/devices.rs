@@ -8,6 +8,7 @@ pub struct DevicesView {
     #[shrinkwrap(main_field)]
     container: gtk::Container,
     device_firmware: gtk::ListBox,
+    device_header: gtk::Label,
     system_firmware: gtk::ListBox,
 }
 
@@ -18,7 +19,11 @@ impl DevicesView {
             ..set_margin_bottom(12);
             ..set_selection_mode(gtk::SelectionMode::None);
             ..connect_row_activated(move |_, row| {
-                if let Some(widget) = row.get_child() {
+                let widget = row.get_child()
+                    .and_then(|w| w.downcast::<gtk::Box>().ok())
+                    .and_then(|w| w.get_children().into_iter().next());
+
+                if let Some(widget) = widget {
                     let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
                 }
             });
@@ -29,7 +34,11 @@ impl DevicesView {
             gtk::ListBox::new();
             ..set_selection_mode(gtk::SelectionMode::None);
             ..connect_row_activated(move |_, row| {
-                if let Some(widget) = row.get_child() {
+                let widget = row.get_child()
+                    .and_then(|w| w.downcast::<gtk::Box>().ok())
+                    .and_then(|w| w.get_children().into_iter().next());
+
+                if let Some(widget) = widget {
                     let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
                 }
             });
@@ -72,6 +81,12 @@ impl DevicesView {
             })
         });
 
+        let device_header = cascade! {
+            gtk::Label::new("<b>Device Firmware</b>".into());
+            ..set_use_markup(true);
+            ..set_xalign(0.0);
+        };
+
         let layout: gtk::Box = cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_halign(gtk::Align::Center);
@@ -82,11 +97,7 @@ impl DevicesView {
                 ..set_xalign(0.0);
             });
             ..add(&system_firmware);
-            ..add(&cascade! {
-                gtk::Label::new("<b>Device Firmware</b>".into());
-                ..set_use_markup(true);
-                ..set_xalign(0.0);
-            });
+            ..add(&device_header);
             ..add(&device_firmware);
         };
 
@@ -106,7 +117,7 @@ impl DevicesView {
             ..dynamic_resize(layout, NonZeroU8::new(66), None);
         };
 
-        Self { container: container.upcast(), device_firmware, system_firmware }
+        Self { container: container.upcast(), device_firmware, device_header, system_firmware }
     }
 
     pub fn clear(&self) {

@@ -167,9 +167,6 @@ pub enum FirmwareSignal {
     /// Thelio I/O firmware was discovered.
     #[cfg(feature = "system76")]
     ThelioIo(FirmwareInfo, Option<System76Digest>),
-
-    /// Stops listening
-    Stop,
 }
 
 /// An event loop that should be run in the background, as this function will block until

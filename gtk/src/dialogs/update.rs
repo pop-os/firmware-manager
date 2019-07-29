@@ -10,28 +10,7 @@ impl FirmwareUpdateDialog {
         upgradeable: bool,
         needs_reboot: bool,
     ) -> Self {
-        let changelog_entries = &cascade! {
-            gtk::Box::new(gtk::Orientation::Vertical, 12);
-            ..set_margin_top(6);
-            ..set_margin_bottom(6);
-        };
-
-        changelog.for_each(|(version, entry)| {
-            let markdown = html2runes::markdown::convert_string(entry.as_ref());
-
-            changelog_entries.add(&cascade! {
-                gtk::Box::new(gtk::Orientation::Vertical, 12);
-                ..add(
-                    &gtk::LabelBuilder::new()
-                        .label(&*format!("<b>{}</b>", version.as_ref()))
-                        .use_markup(true)
-                        .xalign(0.0)
-                        .build()
-                );
-                ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
-                ..add(&gtk::LabelBuilder::new().label(&*markdown).wrap(true).xalign(0.0).build());
-            });
-        });
+        let changelog_entries = crate::changelog::generate_widget(changelog);
 
         let header_text =
             ["Firmware version ", version.trim(), " is available. Fixes and features include:"]
@@ -101,7 +80,7 @@ impl FirmwareUpdateDialog {
                         .hexpand(true)
                         .vexpand(true)
                         .build();
-                    ..add(changelog_entries);
+                    ..add(&changelog_entries);
                 });
                 ..add(
                     &gtk::LabelBuilder::new()

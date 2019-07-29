@@ -1,4 +1,4 @@
-use crate::{dialogs::*, views::*, widgets::*, ActivateEvent};
+use crate::{dialogs::*, views::*, widgets::*, ActivateEvent, Event, UiEvent};
 use firmware_manager::*;
 
 use gtk::prelude::*;
@@ -23,6 +23,8 @@ pub(crate) struct State {
     #[cfg(feature = "system76")]
     /// Stores information about Thelio I/O boards
     pub(crate) thelio_io_data: Rc<RefCell<ThelioData>>,
+    /// Events to be processed by the main event loop
+    pub(crate) ui_sender: glib::Sender<Event>,
     /// Widgets that will be actively managed.
     pub(crate) widgets: Widgets,
 }
@@ -55,6 +57,7 @@ pub(crate) struct Components {
 impl State {
     pub fn new(
         sender: Sender<FirmwareEvent>,
+        ui_sender: glib::Sender<Event>,
         progress_sender: Sender<ActivateEvent>,
         stack: gtk::Stack,
         info_bar: gtk::InfoBar,
@@ -73,6 +76,7 @@ impl State {
                 upgradeable: false,
             })),
             widgets: Widgets { info_bar, info_bar_label, stack, view_devices, view_empty },
+            ui_sender,
         }
     }
 
@@ -150,10 +154,19 @@ impl State {
             widget.stack.set_visible(false);
         }
 
-        {
-            let upgradeable = Rc::clone(&upgradeable);
-            widget.connect_clicked(move || fwupd_dialog(&data, upgradeable.get(), false));
-        }
+        let sender = self.ui_sender.clone();
+        widget.connect_clicked(move |revealer| {
+            reveal(&revealer, &sender, entity, || {
+                let &FwupdDialogData { ref releases, .. } = &*data;
+
+                let log_entries = releases
+                    .iter()
+                    .rev()
+                    .map(|release| (release.version.as_ref(), release.description.as_ref()));
+
+                crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+            });
+        });
 
         self.components.device_widgets.insert(entity, widget);
         self.components.upgradeable.insert(entity, upgradeable);
@@ -198,12 +211,21 @@ impl State {
             widget.stack.set_visible(false);
         }
 
-        {
-            let upgradeable = Rc::clone(&upgradeable);
-            widget.connect_clicked(move || {
-                s76_system_dialog(&data, upgradeable.get());
-            });
-        }
+        let sender = self.ui_sender.clone();
+        widget.connect_clicked(move |revealer| {
+            reveal(&revealer, &sender, entity, || {
+                let &System76DialogData { ref changelog, .. } = &*data;
+
+                let log_entries = changelog.versions.iter().map(|version| {
+                    (
+                        version.bios.as_ref(),
+                        version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
+                    )
+                });
+
+                crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+            })
+        });
 
         self.components.device_widgets.insert(entity, widget);
         self.components.upgradeable.insert(entity, upgradeable);
@@ -248,37 +270,12 @@ impl State {
 
         {
             // When the device's widget is clicked.
-            let sender = self.sender.clone();
-            let tx_progress = self.progress_sender.clone();
-            let stack = widget.stack.downgrade();
-            let progress = widget.progress.downgrade();
-            let data = Rc::clone(&self.thelio_io_data);
-            let info = Rc::clone(&info);
-            widget.connect_clicked(move || {
-                let dialog = FirmwareUpdateDialog::new(
-                    info.latest.as_ref(),
-                    iter::once((info.latest.as_ref(), "")),
-                    data.borrow().upgradeable,
-                    false,
-                );
-
-                if gtk::ResponseType::Accept == dialog.run() {
-                    if let Some(ref digest) = data.borrow().digest {
-                        if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade())
-                        {
-                            stack.set_visible_child(&progress);
-                            let _ = tx_progress.send(ActivateEvent::Activate(progress));
-                        }
-
-                        let _ = sender.send(FirmwareEvent::ThelioIo(
-                            entity,
-                            digest.clone(),
-                            info.latest.clone(),
-                        ));
-                    }
-                }
-
-                dialog.destroy();
+            let sender = self.ui_sender.clone();
+            widget.connect_clicked(move |revealer| {
+                reveal(&revealer, &sender, entity, || {
+                    crate::changelog::generate_widget(iter::once((info.latest.as_ref(), "")))
+                        .upcast::<gtk::Container>()
+                });
             });
         }
 
@@ -302,4 +299,36 @@ impl State {
 pub(crate) struct ThelioData {
     digest:      Option<System76Digest>,
     upgradeable: bool,
+}
+
+fn reveal<F: FnMut() -> gtk::Container>(
+    revealer: &gtk::Revealer,
+    sender: &glib::Sender<Event>,
+    entity: Entity,
+    mut func: F,
+) {
+    let reveal = if revealer.get_reveal_child() {
+        false
+    } else {
+        // If the content to be revealed has not been generated yet, do so.
+        if !revealer.get_child().is_some() {
+            let widget = func();
+
+            let container = cascade! {
+                gtk::Box::new(gtk::Orientation::Vertical, 12);
+                ..set_vexpand(true);
+                ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
+                ..add(&widget);
+                ..show_all();
+            };
+
+            revealer.add(&container);
+            revealer.show_all();
+        }
+
+        true
+    };
+
+    let _ = sender.send(Event::Ui(UiEvent::Revealed(entity, reveal)));
+    revealer.set_reveal_child(reveal);
 }

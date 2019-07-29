@@ -85,7 +85,7 @@ desktop $(DESKTOP): vendor-check
 		--prefix $(prefix) \
 		--startup-notify
 
-notify-startup $(STARTUP_DESKTOP): vendor-check
+notify $(STARTUP_DESKTOP): vendor-check
 	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(APPID).Notify \
 		--name "System76 Firmware Check" \

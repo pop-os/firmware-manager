@@ -17,7 +17,7 @@ pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool) {
     let &FirmwareInfo { latest, .. } = &info;
 
     let log_entries = changelog.versions.iter().map(|version| {
-        (version.bios.as_ref(), version.description.as_ref().map_or("N/A", |desc| desc.as_ref()))
+        (version.bios.as_ref(), version.description.as_ref().map_or("", |desc| desc.as_ref()))
     });
 
     let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, true);
