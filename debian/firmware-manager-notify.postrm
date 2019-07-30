@@ -1,0 +1,7 @@
+#!/bin/sh
+
+systemctl --global disable com.system76.FirmwareManager.Notify.timer
+
+#DEBHELPER#
+
+exit 0

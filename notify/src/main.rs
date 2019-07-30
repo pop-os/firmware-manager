@@ -1,7 +1,7 @@
 #[cfg(feature = "fwupd")]
 use firmware_manager::FwupdSignal;
 use firmware_manager::{get_client, FirmwareSignal};
-use notify_rust::{Notification, NotificationHint, Timeout};
+use notify_rust::{Notification, Timeout};
 use std::{
     path::Path,
     process::{exit, Command},

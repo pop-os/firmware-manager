@@ -1,2 +1,3 @@
 usr/bin/com.system76.FirmwareManager.Notify
 etc/xdg/autostart/com.system76.FirmwareManager.Notify.desktop
+usr/lib/systemd/user/com.system76.FirmwareManager.Notify.*

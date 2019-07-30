@@ -23,6 +23,9 @@ endif
 features ?= fwupd system76
 
 APPID = com.system76.FirmwareManager
+NOTIFY_APPID = $(APPID).Notify
+NOTIFY_SERVICE = $(NOTIFY_APPID).service
+NOTIFY_TIMER = $(NOTIFY_APPID).timer
 
 GTKPROJ = gtk/Cargo.toml
 GTKFFIPROJ = gtk/ffi/Cargo.toml
@@ -33,6 +36,7 @@ DESKTOP = target/$(APPID).desktop
 STARTUP_DESKTOP = target/$(APPID).Notify.desktop
 GTKBINARY = target/$(TARGET)/firmware-manager-gtk
 NOTBINARY = target/$(TARGET)/firmware-manager-notify
+
 LIBRARY = target/$(TARGET)/lib$(PACKAGE).so
 PKGCONFIG = target/$(PACKAGE).pc
 HEADER = gtk/ffi/$(PACKAGE).h
@@ -65,7 +69,8 @@ bin $(GTKBINARY): $(DESKTOP) vendor-check
 	cargo build --manifest-path $(GTKPROJ) $(ARGS) --features '$(features)'
 
 bin-notify $(NOTBINARY): $(STARTUP_DESKTOP) vendor-check
-	cargo build --manifest-path $(NOTPROJ) $(ARGS) --features '$(features)'
+	env APPID=$(NOTIFY_APPID) prefix=$(prefix) \
+		cargo build --manifest-path $(NOTPROJ) $(ARGS) --features '$(features)'
 
 ## Builds the desktop entry in the target directory.
 
@@ -85,14 +90,14 @@ desktop $(DESKTOP): vendor-check
 		--prefix $(prefix) \
 		--startup-notify
 
-notify $(STARTUP_DESKTOP): vendor-check
+notify-desktop $(STARTUP_DESKTOP): vendor-check
 	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
-		--appid $(APPID).Notify \
+		--appid $(NOTIFY_APPID) \
 		--name "System76 Firmware Check" \
 		--icon firmware-manager \
 		--comment "Check for firmware updates, and display notification if found" \
 		--categories System \
-		--binary $(APPID).Notify \
+		--binary $(NOTIFY_APPID) \
 		--prefix $(prefix) \
 
 ## Building the library
@@ -122,8 +127,10 @@ install-ffi:
 	install -Dm0644 "$(PKGCONFIG)" "$(DESTDIR)$(libdir)/pkgconfig/$(PACKAGE).pc"
 
 install-notify:
-	install -Dm0755 "$(NOTBINARY)"  "$(DESTDIR)$(bindir)/$(APPID).Notify"
-	install -Dm0644 "$(STARTUP_DESKTOP)"  "$(DESTDIR)/etc/xdg/autostart/$(APPID).Notify.desktop"
+	install -Dm0755 "$(NOTBINARY)"  "$(DESTDIR)$(bindir)/$(NOTIFY_APPID)"
+	install -Dm0644 "$(STARTUP_DESKTOP)"  "$(DESTDIR)/etc/xdg/autostart/$(NOTIFY_APPID).desktop"
+	install -Dm0644 "target/$(NOTIFY_SERVICE)" "$(DESTDIR)$(libdir)/systemd/user/$(NOTIFY_SERVICE)"
+	install -Dm0644 "target/$(NOTIFY_TIMER)" "$(DESTDIR)$(libdir)/systemd/user/$(NOTIFY_TIMER)"
 
 ## Uninstall Commands
 
