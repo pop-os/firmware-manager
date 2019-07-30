@@ -14,11 +14,31 @@ where
         other: W,
         width_percent: Option<NonZeroU8>,
         height_percent: Option<NonZeroU8>,
-    ) {
+    ) where
+        Self: Clone,
+    {
         self.connect_size_allocate(move |_, allocation| {
+            // The parent widget has not been realized if this value is less than 2.
+            // Keep the child hidden until this value is not zero.
+            if allocation.width < 2 {
+                other.hide();
+                return;
+            }
+
+            // Calculate the size of the child based on the given percentages.
             let width = width_percent.map_or(-1, |percent| calc_side(allocation.width, percent));
             let height = height_percent.map_or(-1, |percent| calc_side(allocation.height, percent));
+
+            other.show();
             other.set_size_request(width, height);
+        });
+
+        // The first invocation of size_allocate will fail, because it has not been realized
+        // yet, so this will ensure that we get the correct value after init.
+        let parent = self.clone();
+        gtk::idle_add(move || {
+            parent.size_allocate(&mut parent.get_allocation());
+            gtk::Continue(false)
         });
     }
 }

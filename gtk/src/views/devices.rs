@@ -106,6 +106,7 @@ impl DevicesView {
             ..add(&system_firmware);
             ..add(&device_header);
             ..add(&device_firmware);
+            ..set_no_show_all(true);
         };
 
         cascade! {

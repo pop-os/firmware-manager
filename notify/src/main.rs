@@ -1,6 +1,6 @@
-use firmware_manager::{get_client, FirmwareSignal};
 #[cfg(feature = "fwupd")]
 use firmware_manager::FwupdSignal;
+use firmware_manager::{get_client, FirmwareSignal};
 use notify_rust::{Notification, NotificationHint, Timeout};
 use std::{
     path::Path,
@@ -27,17 +27,17 @@ fn main() {
 
     let event_handler = |event: FirmwareSignal| match event {
         #[cfg(feature = "fwupd")]
-        FirmwareSignal::Fwupd(FwupdSignal { info, ..}) => {
+        FirmwareSignal::Fwupd(FwupdSignal { info, .. }) => {
             if info.current != info.latest {
                 notify();
             }
-        },
+        }
         #[cfg(feature = "system76")]
         FirmwareSignal::S76System(info, ..) | FirmwareSignal::ThelioIo(info, ..) => {
             if info.current != info.latest {
                 notify();
             }
-        },
+        }
         _ => (),
     };
 
