@@ -111,6 +111,7 @@ impl FirmwareWidget {
                         false
                     })
                 });
+                ..show_all();
             };
 
             container
