@@ -46,6 +46,8 @@ impl DeviceWidget {
             gtk::ProgressBarBuilder::new()
                 .show_text(true)
                 .pulse_step(0.1 / f64::from(info.install_duration + 1))
+                .valign(gtk::Align::Center)
+                .height_request(30)
                 .build();
             ..pulse();
             ..show();
