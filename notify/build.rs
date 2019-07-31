@@ -1,4 +1,4 @@
-use std::{fs::File, env, io::Write};
+use std::{env, fs::File, io::Write};
 
 markup::define! {
     Service<'a>(description: &'a str, appid: &'a str, exec: &'a str) {
@@ -40,14 +40,14 @@ fn main() {
 
     let timer = Timer {
         description: "Checks for new firmware every day",
-        appid: &appid,
-        minutes: 1440
+        appid:       &appid,
+        minutes:     1440,
     };
 
     let service = Service {
         description: "Check for firmware updates, and display a notification if found",
-        appid: &appid,
-        exec: &exec
+        appid:       &appid,
+        exec:        &exec,
     };
 
     File::create(timer_path)

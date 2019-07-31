@@ -52,20 +52,44 @@ impl DeviceWidget {
             ..show();
         };
 
-        let revealer = gtk::Revealer::new();
+        let dropdown_image = gtk::ImageBuilder::new()
+            .icon_name("pan-end-symbolic")
+            .icon_size(gtk::IconSize::Menu.into())
+            .halign(gtk::Align::Start)
+            .valign(gtk::Align::Center)
+            .build();
+
+        let dropdown_image_ = dropdown_image.downgrade();
+        let revealer = cascade! {
+            gtk::Revealer::new();
+            ..connect_property_reveal_child_notify(move |revealer| {
+                dropdown_image_.upgrade()
+                    .expect("dropdown image did not exist")
+                    .set_from_icon_name(
+                        Some(if revealer.get_reveal_child() {
+                            "pan-down-symbolic"
+                        } else {
+                            "pan-end-symbolic"
+                        }),
+                        gtk::IconSize::Menu
+                    );
+            });
+        };
 
         let event_box = cascade! {
             gtk::EventBoxBuilder::new()
                 .can_focus(false)
+                .hexpand(true)
                 .events(gdk::EventMask::BUTTON_PRESS_MASK)
                 .build();
             ..add(&cascade! {
                 gtk::GridBuilder::new()
                     .column_spacing(12)
                     .build();
-                ..attach(&device, 0, 0, 1, 1);
-                ..attach(&label, 0, 1, 1, 1);
-                ..attach(&stack, 1, 0, 1, 2);
+                ..attach(&dropdown_image, 0, 0, 1, 2);
+                ..attach(&device, 1, 0, 1, 1);
+                ..attach(&label, 1, 1, 1, 1);
+                ..attach(&stack, 2, 0, 1, 2);
             });
         };
 
