@@ -15,12 +15,17 @@ pub struct DeviceWidget {
 
 impl DeviceWidget {
     pub fn new(info: &FirmwareInfo) -> Self {
-        let device = gtk::LabelBuilder::new().label(info.name.as_ref()).xalign(0.0).build();
+        let device = gtk::LabelBuilder::new()
+            .label(info.name.as_ref())
+            .xalign(0.0)
+            .valign(gtk::Align::End)
+            .build();
 
         let label = cascade! {
             gtk::LabelBuilder::new()
                 .label(info.current.as_ref())
                 .xalign(0.0)
+                .valign(gtk::Align::Start)
                 .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_DIM_LABEL);
         };
