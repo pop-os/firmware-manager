@@ -39,6 +39,7 @@ pub struct FirmwareWidget {
 }
 
 enum UiEvent {
+    HideStack(Entity),
     Revealed(Entity, bool),
 }
 
@@ -256,6 +257,12 @@ impl FirmwareWidget {
                 // An event that occurs when a Thelio I/O board was discovered.
                 #[cfg(feature = "system76")]
                 Firmware(ThelioIo(info, digest)) => state.thelio_io(info, digest),
+                // Hides the entity's stack.
+                Ui(HideStack(entity)) => {
+                    if let Some(widget) = state.components.device_widgets.get(entity) {
+                        widget.stack.set_visible(false);
+                    }
+                }
                 // Signals that an entity's revealer has been revealed, and so we should hide the
                 // last-active revealer.
                 Ui(Revealed(entity, revealed)) => {
@@ -270,6 +277,7 @@ impl FirmwareWidget {
                         last_active_revealer = None;
                     }
                 }
+
                 // This is the last message sent before the background thread exits.
                 Stop => {
                     return glib::Continue(false);

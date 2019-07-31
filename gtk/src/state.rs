@@ -80,7 +80,7 @@ impl State {
     /// An event that occurs when firmware has successfully updated.
     pub fn device_updated(&self, entity: Entity, latest: Box<str>) {
         if let Some(widget) = self.components.device_widgets.get(entity) {
-            widget.stack.set_visible(false);
+            widget.progress.set_fraction(1.0);
             widget.label.set_text(latest.as_ref());
 
             if let Some(upgradeable) = self.components.upgradeable.get(entity) {
@@ -92,6 +92,14 @@ impl State {
             if self.entities.is_system(entity) {
                 crate::reboot();
             }
+
+            // Wait 1 second before changing the visibility of the stack.
+            let sender = self.ui_sender.clone();
+            gtk::timeout_add_seconds(1, move || {
+                let _ = sender.send(Event::Ui(UiEvent::HideStack(entity)));
+
+                gtk::Continue(false)
+            });
         }
     }
 
