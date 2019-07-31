@@ -10,7 +10,7 @@ impl FirmwareUpdateDialog {
         upgradeable: bool,
         needs_reboot: bool,
     ) -> Self {
-        let changelog_entries = crate::changelog::generate_widget(changelog);
+        let changelog_entries = crate::changelog::generate_widget(changelog, false);
 
         let header_text =
             ["Firmware version ", version.trim(), " is available. Fixes and features include:"]

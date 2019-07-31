@@ -164,7 +164,7 @@ impl State {
                     .rev()
                     .map(|release| (release.version.as_ref(), release.description.as_ref()));
 
-                crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+                crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
             });
         });
 
@@ -223,7 +223,7 @@ impl State {
                     )
                 });
 
-                crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+                crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
             })
         });
 
@@ -273,7 +273,7 @@ impl State {
             let sender = self.ui_sender.clone();
             widget.connect_clicked(move |revealer| {
                 reveal(&revealer, &sender, entity, || {
-                    crate::changelog::generate_widget(iter::once((info.latest.as_ref(), "")))
+                    crate::changelog::generate_widget(iter::once((info.latest.as_ref(), "")), true)
                         .upcast::<gtk::Container>()
                 });
             });

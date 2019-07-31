@@ -1,7 +1,7 @@
 use gtk::prelude::*;
 use std::borrow::Cow;
 
-pub fn generate_widget<I, S>(changelog: I) -> gtk::Box
+pub fn generate_widget<I, S>(changelog: I, pad: bool) -> gtk::Box
 where
     S: AsRef<str>,
     I: Iterator<Item = (S, S)>,
@@ -22,11 +22,15 @@ where
         // Even though we set a max width of chars, this will be ignored by GTK as the
         // parent is resized.
 
+        let margin = if pad { 48 } else { 0 };
+
         let version = gtk::LabelBuilder::new()
             .label(&*format!("<b>{}</b>", version.as_ref()))
             .use_markup(true)
             .xalign(0.0)
             .max_width_chars(40)
+            .margin_start(margin)
+            .margin_end(margin)
             .build();
 
         let changelog = gtk::LabelBuilder::new()
@@ -34,6 +38,8 @@ where
             .wrap(true)
             .xalign(0.0)
             .max_width_chars(40)
+            .margin_start(margin)
+            .margin_end(margin)
             .build();
 
         changelog_entries.add(&cascade! {
