@@ -4,7 +4,7 @@ use firmware_manager::*;
 use gtk::prelude::*;
 use slotmap::{DefaultKey as Entity, SecondaryMap};
 use std::{
-    cell::{Cell, RefCell},
+    cell::Cell,
     iter,
     rc::Rc,
     sync::{mpsc::Sender, Arc},
@@ -22,9 +22,6 @@ pub(crate) struct State {
     pub(crate) progress_sender: Sender<ActivateEvent>,
     /// A sender to send firmware requests to the background thread
     pub(crate) sender: Sender<FirmwareEvent>,
-    #[cfg(feature = "system76")]
-    /// Stores information about Thelio I/O boards
-    pub(crate) thelio_io_data: Rc<RefCell<ThelioData>>,
     /// Events to be processed by the main event loop
     pub(crate) ui_sender: glib::Sender<Event>,
     /// Widgets that will be actively managed.
@@ -75,11 +72,6 @@ impl State {
                 .unwrap_or(false),
             progress_sender,
             sender,
-            #[cfg(feature = "system76")]
-            thelio_io_data: Rc::new(RefCell::new(ThelioData {
-                digest:      None,
-                upgradeable: false,
-            })),
             widgets: Widgets { info_bar, info_bar_label, stack, view_devices, view_empty },
             ui_sender,
         }
@@ -87,39 +79,18 @@ impl State {
 
     /// An event that occurs when firmware has successfully updated.
     pub fn device_updated(&self, entity: Entity, latest: Box<str>) {
-        let mut device_continue = true;
+        if let Some(widget) = self.components.device_widgets.get(entity) {
+            widget.stack.set_visible(false);
+            widget.label.set_text(latest.as_ref());
 
-        #[cfg(feature = "system76")]
-        {
-            if self.entities.is_thelio_io(entity) {
-                for entity in self.entities.thelio_io.keys() {
-                    let widget = &self.components.device_widgets[entity];
-                    widget.stack.set_visible(false);
-                    widget.label.set_text(latest.as_ref());
-                    let _ = self
-                        .progress_sender
-                        .send(ActivateEvent::Deactivate(widget.progress.clone()));
-                }
-
-                device_continue = false;
+            if let Some(upgradeable) = self.components.upgradeable.get(entity) {
+                upgradeable.set(false);
             }
-        }
 
-        if device_continue {
-            if let Some(widget) = self.components.device_widgets.get(entity) {
-                widget.stack.set_visible(false);
-                widget.label.set_text(latest.as_ref());
+            let _ = self.progress_sender.send(ActivateEvent::Deactivate(widget.progress.clone()));
 
-                if let Some(upgradeable) = self.components.upgradeable.get(entity) {
-                    upgradeable.set(false);
-                }
-
-                let _ =
-                    self.progress_sender.send(ActivateEvent::Deactivate(widget.progress.clone()));
-
-                if self.entities.is_system(entity) {
-                    crate::reboot();
-                }
+            if self.entities.is_system(entity) {
+                crate::reboot();
             }
         }
     }
@@ -244,24 +215,20 @@ impl State {
 
     /// An event that occurs when a Thelio I/O board was discovered.
     #[cfg(feature = "system76")]
-    pub fn thelio_io(&mut self, info: FirmwareInfo, digest: Option<System76Digest>) {
+    pub fn thelio_io(&mut self, info: FirmwareInfo, digest: System76Digest) {
         let widget = self.widgets.view_devices.device(&info);
         let entity = self.entities.create();
-        let info = Rc::new(info);
 
-        if info.current != info.latest {
-            self.thelio_io_data.borrow_mut().upgradeable = true;
-        }
+        let upgradeable = info.current != info.latest;
 
-        if let Some(digest) = digest {
-            self.thelio_io_data.borrow_mut().digest = Some(digest.clone());
+        let sender = self.sender.clone();
+        let tx_progress = self.progress_sender.clone();
+        let stack = widget.stack.downgrade();
+        let progress = widget.progress.downgrade();
+        let latest: Rc<str> = Rc::from(info.latest);
 
-            let sender = self.sender.clone();
-            let tx_progress = self.progress_sender.clone();
-            let stack = widget.stack.downgrade();
-            let progress = widget.progress.downgrade();
-            let info = Rc::clone(&info);
-
+        {
+            let latest = Rc::clone(&latest);
             widget.connect_upgrade_clicked(move || {
                 // Exchange the button for a progress bar.
                 if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
@@ -269,11 +236,8 @@ impl State {
                     let _ = tx_progress.send(ActivateEvent::Activate(progress));
                 }
 
-                let _ = sender.send(FirmwareEvent::ThelioIo(
-                    entity,
-                    digest.clone(),
-                    info.latest.clone(),
-                ));
+                let _ =
+                    sender.send(FirmwareEvent::ThelioIo(entity, digest.clone(), (&*latest).into()));
             });
         }
 
@@ -282,32 +246,18 @@ impl State {
             let sender = self.ui_sender.clone();
             widget.connect_clicked(move |revealer| {
                 reveal(&revealer, &sender, entity, || {
-                    crate::changelog::generate_widget(iter::once((info.latest.as_ref(), "")), true)
+                    crate::changelog::generate_widget(iter::once((latest.as_ref(), "")), true)
                         .upcast::<gtk::Container>()
                 });
             });
         }
 
-        widget.stack.set_visible(false);
+        widget.stack.set_visible(upgradeable);
         self.components.device_widgets.insert(entity, widget);
-        self.entities.associate_thelio_io(entity);
-
-        // If any Thelio I/O device requires an update, then enable the
-        // update button on the first Thelio I/O device widget.
-        if self.thelio_io_data.borrow_mut().upgradeable {
-            let entity = self.entities.thelio_io.keys().next().expect("missing thelio I/O widgets");
-            self.components.device_widgets[entity].stack.set_visible(true);
-        }
 
         self.widgets.stack.show();
         self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
     }
-}
-
-#[cfg(feature = "system76")]
-pub(crate) struct ThelioData {
-    digest:      Option<System76Digest>,
-    upgradeable: bool,
 }
 
 fn reveal<F: FnMut() -> gtk::Container>(

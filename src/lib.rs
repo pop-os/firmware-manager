@@ -89,18 +89,11 @@ pub struct Entities {
 
     /// Secondary storage to keep record of all system devices.
     pub system: SecondaryMap<Entity, ()>,
-
-    /// Secondary storage to keep record of all Thelio I/O devices.
-    #[cfg(feature = "system76")]
-    pub thelio_io: SecondaryMap<Entity, ()>,
 }
 
 impl Entities {
     /// Associate this entity as a system device
     pub fn associate_system(&mut self, entity: Entity) { self.system.insert(entity, ()); }
-
-    /// Associate this entity as a Thelio I/O device
-    pub fn associate_thelio_io(&mut self, entity: Entity) { self.thelio_io.insert(entity, ()); }
 
     /// Clear all entities from the world
     ///
@@ -112,9 +105,6 @@ impl Entities {
 
     /// Check if an entity is a system device
     pub fn is_system(&self, entity: Entity) -> bool { self.system.contains_key(entity) }
-
-    /// Check if an entity is a Thelio I/O device
-    pub fn is_thelio_io(&self, entity: Entity) -> bool { self.thelio_io.contains_key(entity) }
 }
 
 /// A signal sent when a fwupd-compatible device has been discovered.
@@ -166,7 +156,7 @@ pub enum FirmwareSignal {
 
     /// Thelio I/O firmware was discovered.
     #[cfg(feature = "system76")]
-    ThelioIo(FirmwareInfo, Option<System76Digest>),
+    ThelioIo(FirmwareInfo, System76Digest),
 }
 
 /// An event loop that should be run in the background, as this function will block until
@@ -239,7 +229,6 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
             }
             #[cfg(feature = "system76")]
             FirmwareEvent::S76System(entity, digest, _latest) => {
-                sender(FirmwareSignal::DeviceFlashing(entity));
                 match s76.as_ref().map(|client| client.schedule(&digest)) {
                     Some(Ok(_)) => sender(FirmwareSignal::SystemScheduled),
                     Some(Err(why)) => sender(FirmwareSignal::Error(Some(entity), why.into())),
@@ -367,30 +356,33 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
 
     // Thelio I/O system firmware check.
     let event = match client.thelio_io_list() {
-        Ok(list) => match client.thelio_io_download() {
-            Ok(info) => {
-                let ThelioIoInfo { digest, revision } = info;
-                let digest = &mut Some(digest);
-                for (num, (_, device_revision)) in list.iter().enumerate() {
-                    let fw = FirmwareInfo {
-                        name:             format!("Thelio I/O #{}", num + 1).into(),
-                        current:          Box::from(if device_revision.is_empty() {
-                            "N/A"
-                        } else {
-                            device_revision.as_str()
-                        }),
-                        latest:           revision.clone(),
-                        install_duration: 15,
-                    };
-
-                    let event = FirmwareSignal::ThelioIo(fw, digest.take());
-                    sender(event);
-                }
-
+        Ok(list) => {
+            if list.is_empty() {
                 None
+            } else {
+                match client.thelio_io_download() {
+                    Ok(info) => {
+                        let ThelioIoInfo { digest, revision } = info;
+                        let lowest_revision =
+                            lowest_revision(list.iter().map(|(_, rev)| rev.as_ref()));
+
+                        let fw = FirmwareInfo {
+                            name:             "Thelio I/O".into(),
+                            current:          Box::from(if lowest_revision.is_empty() {
+                                "N/A"
+                            } else {
+                                lowest_revision
+                            }),
+                            latest:           revision,
+                            install_duration: 15,
+                        };
+
+                        Some(FirmwareSignal::ThelioIo(fw, digest))
+                    }
+                    Err(why) => Some(FirmwareSignal::Error(None, why.into())),
+                }
             }
-            Err(why) => Some(FirmwareSignal::Error(None, why.into())),
-        },
+        }
         Err(why) => Some(FirmwareSignal::Error(None, why.into())),
     };
 
@@ -427,4 +419,38 @@ fn systemd_service_is_active(name: &str) -> bool {
         .map_err(|why| eprintln!("{}", why))
         .ok()
         .map_or(false, |status| status.success())
+}
+
+fn lowest_revision<'a, I: Iterator<Item = &'a str>>(mut list: I) -> &'a str {
+    use std::cmp::Ordering;
+    match list.next() {
+        Some(rev) => {
+            let mut lowest_revision: &str = rev.as_ref();
+            for rev in list {
+                if human_sort::compare(lowest_revision, &rev) == Ordering::Greater {
+                    lowest_revision = &rev;
+                }
+            }
+            lowest_revision
+        }
+        None => "",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn lowest_revision() {
+        let input = vec!["", "F10", "F5"];
+        let rev = super::lowest_revision(input.iter().cloned());
+        assert_eq!(rev, "");
+
+        let input = vec!["F3", "F10", "F5"];
+        let rev = super::lowest_revision(input.iter().cloned());
+        assert_eq!(rev, "F3");
+
+        let input = vec!["F10", "F3", "F5"];
+        let rev = super::lowest_revision(input.iter().cloned());
+        assert_eq!(rev, "F3");
+    }
 }
