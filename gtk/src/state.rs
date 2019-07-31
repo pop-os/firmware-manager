@@ -16,6 +16,8 @@ pub(crate) struct State {
     pub(crate) components: Components,
     /// All devices will be created as an entity here
     pub(crate) entities: Entities,
+    /// If this system has a battery.
+    pub(crate) has_battery: bool,
     /// Sends events to the progress signal
     pub(crate) progress_sender: Sender<ActivateEvent>,
     /// A sender to send firmware requests to the background thread
@@ -68,6 +70,9 @@ impl State {
         Self {
             entities: Entities::default(),
             components: Components::default(),
+            has_battery: upower_dbus::UPower::new(-1)
+                .map(|upower| upower.on_battery().is_ok())
+                .unwrap_or(false),
             progress_sender,
             sender,
             #[cfg(feature = "system76")]
@@ -124,6 +129,7 @@ impl State {
     pub fn fwupd(&mut self, signal: FwupdSignal) {
         let FwupdSignal { info, device, upgradeable, releases } = signal;
         let entity = self.entities.create();
+        let has_battery = self.has_battery;
 
         let widget = if device.needs_reboot() {
             self.entities.associate_system(entity);
@@ -149,7 +155,9 @@ impl State {
         if upgradeable.get() {
             let data = Rc::clone(&data);
             let upgradeable = Rc::clone(&upgradeable);
-            widget.connect_upgrade_clicked(move || fwupd_dialog(&data, upgradeable.get(), true));
+            widget.connect_upgrade_clicked(move || {
+                fwupd_dialog(&data, upgradeable.get(), has_battery, true)
+            });
         } else {
             widget.stack.set_visible(false);
         }
@@ -186,6 +194,7 @@ impl State {
         let entity = self.entities.create();
         self.entities.associate_system(entity);
         let upgradeable = info.current != info.latest;
+        let has_battery = self.has_battery;
 
         let data = Rc::new(System76DialogData {
             entity,
@@ -205,7 +214,7 @@ impl State {
             let data = Rc::clone(&data);
             let upgradeable = Rc::clone(&upgradeable);
             widget.connect_upgrade_clicked(move || {
-                s76_system_dialog(&data, upgradeable.get());
+                s76_system_dialog(&data, upgradeable.get(), has_battery);
             });
         } else {
             widget.stack.set_visible(false);

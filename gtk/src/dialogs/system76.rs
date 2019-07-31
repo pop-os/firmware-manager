@@ -11,7 +11,7 @@ pub(crate) struct System76DialogData {
 }
 
 #[cfg(feature = "system76")]
-pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool) {
+pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool, has_battery: bool) {
     let &System76DialogData { entity, digest, changelog, shared } = &data;
     let &DialogData { sender, stack, progress, info } = &shared;
     let &FirmwareInfo { latest, .. } = &info;
@@ -20,7 +20,7 @@ pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool) {
         (version.bios.as_ref(), version.description.as_ref().map_or("", |desc| desc.as_ref()))
     });
 
-    let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, true);
+    let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, true, has_battery);
 
     if gtk::ResponseType::Accept == dialog.run() {
         // Exchange the button for a progress bar.

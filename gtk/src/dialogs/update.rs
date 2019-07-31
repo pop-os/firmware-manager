@@ -9,6 +9,7 @@ impl FirmwareUpdateDialog {
         changelog: I,
         upgradeable: bool,
         needs_reboot: bool,
+        has_battery: bool,
     ) -> Self {
         let changelog_entries = crate::changelog::generate_widget(changelog, false);
 
@@ -54,7 +55,7 @@ impl FirmwareUpdateDialog {
         };
 
         cascade! {
-            dialog.get_content_area();
+            content: dialog.get_content_area();
             ..set_orientation(gtk::Orientation::Horizontal);
             ..set_border_width(12);
             ..set_spacing(12);
@@ -82,13 +83,15 @@ impl FirmwareUpdateDialog {
                         .build();
                     ..add(&changelog_entries);
                 });
-                ..add(
-                    &gtk::LabelBuilder::new()
-                        .label("If you're on a laptop, <b>plug into power</b> before you begin.")
-                        .use_markup(true)
-                        .xalign(0.0)
-                        .build()
-                );
+                | if has_battery {
+                    content.add(
+                        &gtk::LabelBuilder::new()
+                            .label("If you're on a laptop, <b>plug into power</b> before you begin.")
+                            .use_markup(true)
+                            .xalign(0.0)
+                            .build()
+                    );
+                };
             });
         };
 

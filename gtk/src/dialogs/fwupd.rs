@@ -10,7 +10,12 @@ pub(crate) struct FwupdDialogData {
     pub shared:   DialogData,
 }
 
-pub(crate) fn fwupd_dialog(data: &FwupdDialogData, upgradeable: bool, upgrade_button: bool) {
+pub(crate) fn fwupd_dialog(
+    data: &FwupdDialogData,
+    upgradeable: bool,
+    has_battery: bool,
+    upgrade_button: bool,
+) {
     let &FwupdDialogData { entity, device, releases, shared } = &data;
     let &DialogData { sender, stack, progress, info } = &shared;
 
@@ -22,8 +27,13 @@ pub(crate) fn fwupd_dialog(data: &FwupdDialogData, upgradeable: bool, upgrade_bu
             .rev()
             .map(|release| (release.version.as_ref(), release.description.as_ref()));
 
-        let dialog =
-            FirmwareUpdateDialog::new(latest, log_entries, upgradeable, device.needs_reboot());
+        let dialog = FirmwareUpdateDialog::new(
+            latest,
+            log_entries,
+            upgradeable,
+            device.needs_reboot(),
+            has_battery,
+        );
 
         let response = dialog.run();
         dialog.destroy();
