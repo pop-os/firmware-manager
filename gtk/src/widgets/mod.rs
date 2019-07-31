@@ -30,7 +30,9 @@ impl DeviceWidget {
                 .label("Update")
                 .halign(gtk::Align::End)
                 .hexpand(true)
+                .vexpand(true)
                 .visible(info.current != info.latest)
+                .margin(15)
                 .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
