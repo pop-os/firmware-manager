@@ -9,6 +9,7 @@ pub struct DevicesView {
     container: gtk::Container,
     device_firmware: gtk::ListBox,
     device_header: gtk::Label,
+    sg: gtk::SizeGroup,
     system_firmware: gtk::ListBox,
     system_header: gtk::Label,
 }
@@ -129,6 +130,7 @@ impl DevicesView {
             container: container.upcast(),
             device_firmware,
             device_header,
+            sg: gtk::SizeGroup::new(gtk::SizeGroupMode::Vertical),
             system_firmware,
             system_header,
         }
@@ -141,12 +143,12 @@ impl DevicesView {
 
     pub fn device(&self, info: &FirmwareInfo) -> DeviceWidget {
         self.show_devices();
-        Self::append(&self.device_firmware, info)
+        self.append(&self.device_firmware, info)
     }
 
     pub fn system(&self, info: &FirmwareInfo) -> DeviceWidget {
         self.show_systems();
-        Self::append(&self.system_firmware, info)
+        self.append(&self.system_firmware, info)
     }
 
     pub fn hide_devices(&self) {
@@ -169,8 +171,9 @@ impl DevicesView {
         self.system_header.show();
     }
 
-    fn append(parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
+    fn append(&self, parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
         let widget = DeviceWidget::new(info);
+        self.sg.add_widget(&widget.event_box);
         parent.add(widget.as_ref());
         widget
     }

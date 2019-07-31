@@ -36,8 +36,7 @@ impl DeviceWidget {
                 .halign(gtk::Align::End)
                 .hexpand(true)
                 .vexpand(true)
-                .visible(info.current != info.latest)
-                .margin(15)
+                .margin(9)
                 .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
@@ -50,7 +49,6 @@ impl DeviceWidget {
                 .height_request(30)
                 .build();
             ..pulse();
-            ..show();
         };
 
         let stack = cascade! {
@@ -58,7 +56,6 @@ impl DeviceWidget {
             ..add(&button);
             ..add(&progress);
             ..set_visible_child(&button);
-            ..show();
         };
 
         let dropdown_image = gtk::ImageBuilder::new()
@@ -94,6 +91,7 @@ impl DeviceWidget {
             ..add(&cascade! {
                 gtk::GridBuilder::new()
                     .column_spacing(12)
+                    .row_spacing(3)
                     .build();
                 ..attach(&dropdown_image, 0, 0, 1, 2);
                 ..attach(&device, 1, 0, 1, 1);

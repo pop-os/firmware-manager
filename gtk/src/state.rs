@@ -138,7 +138,7 @@ impl State {
                 fwupd_dialog(&data, upgradeable.get(), has_battery, true)
             });
         } else {
-            widget.stack.set_visible(false);
+            widget.stack.hide();
         }
 
         let sender = self.ui_sender.clone();
@@ -196,7 +196,7 @@ impl State {
                 s76_system_dialog(&data, upgradeable.get(), has_battery);
             });
         } else {
-            widget.stack.set_visible(false);
+            widget.stack.hide();
         }
 
         let sender = self.ui_sender.clone();
@@ -260,7 +260,11 @@ impl State {
             });
         }
 
-        widget.stack.set_visible(upgradeable);
+        if upgradeable {
+            widget.stack.show();
+        } else {
+            widget.stack.hide();
+        }
         self.components.device_widgets.insert(entity, widget);
 
         self.widgets.stack.show();

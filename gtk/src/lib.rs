@@ -260,7 +260,7 @@ impl FirmwareWidget {
                 // Hides the entity's stack.
                 Ui(HideStack(entity)) => {
                     if let Some(widget) = state.components.device_widgets.get(entity) {
-                        widget.stack.set_visible(false);
+                        widget.stack.hide();
                     }
                 }
                 // Signals that an entity's revealer has been revealed, and so we should hide the
