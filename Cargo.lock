@@ -572,6 +572,7 @@ version = "0.1.0"
 dependencies = [
  "err-derive 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "fwupd-dbus 0.1.0 (git+https://github.com/pop-os/fwupd-dbus)",
+ "markup 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.9.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "shrinkwraprs 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slotmap 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -9,7 +9,7 @@ system76 = []
 fwupd = []
 
 [build-dependencies]
-markup = "0.3.1"
+markup = "0.3"
 
 [dependencies]
 firmware-manager = { path = "../" }

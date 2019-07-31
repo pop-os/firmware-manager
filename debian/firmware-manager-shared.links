@@ -1,0 +1,1 @@
+lib/systemd/system/com.system76.FirmwareManager.target lib/systemd/system/multi-user.target.wants/com.system76.FirmwareManager.target

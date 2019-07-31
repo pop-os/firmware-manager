@@ -1,0 +1,4 @@
+[Unit]
+Description=Ensures that the fwupd service has been started
+Requires=network-online.target
+Wants=fwupd.service

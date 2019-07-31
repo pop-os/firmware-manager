@@ -11,6 +11,9 @@ members = [ "gtk", "gtk/ffi", "notify", "tools" ]
 fwupd = [ "fwupd-dbus" ]
 system76 = [ "system76-firmware-daemon" ]
 
+[build-dependencies]
+markup = "0.3"
+
 [dependencies]
 err-derive = "0.1.5"
 fwupd-dbus = { git = "https://github.com/pop-os/fwupd-dbus", optional = true }

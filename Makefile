@@ -117,20 +117,23 @@ $(PKGCONFIG): tools/src/pkgconfig.rs
 
 install: install-bin install-ffi install-notify
 
-install-bin:
+install-bin: install-shared
 	install -Dm0755 "$(GTKBINARY)"  "$(DESTDIR)$(bindir)/$(APPID)"
 	install -Dm0644 "$(DESKTOP)" "$(DESTDIR)$(prefix)/share/applications/$(APPID).desktop"
 
-install-ffi:
+install-ffi: install-shared
 	install -Dm0644 "$(HEADER)"    "$(DESTDIR)$(includedir)/$(PACKAGE).h"
 	install -Dm0644 "$(LIBRARY)"   "$(DESTDIR)$(libdir)/lib$(PACKAGE).so"
 	install -Dm0644 "$(PKGCONFIG)" "$(DESTDIR)$(libdir)/pkgconfig/$(PACKAGE).pc"
 
-install-notify:
+install-notify: install-shared
 	install -Dm0755 "$(NOTBINARY)"  "$(DESTDIR)$(bindir)/$(NOTIFY_APPID)"
 	install -Dm0644 "$(STARTUP_DESKTOP)"  "$(DESTDIR)/etc/xdg/autostart/$(NOTIFY_APPID).desktop"
 	install -Dm0644 "target/$(NOTIFY_SERVICE)" "$(DESTDIR)$(libdir)/systemd/user/$(NOTIFY_SERVICE)"
 	install -Dm0644 "target/$(NOTIFY_TIMER)" "$(DESTDIR)$(libdir)/systemd/user/$(NOTIFY_TIMER)"
+
+install-shared:
+	install -Dm0644 $(APPID).target "$(DESTDIR)/lib/systemd/system/$(APPID).target"
 
 ## Uninstall Commands
 
