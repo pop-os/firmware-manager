@@ -5,6 +5,7 @@ authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
 edition = "2018"
 
 [features]
+default = [ "fwupd", "system76" ]
 system76 = []
 fwupd = []
 

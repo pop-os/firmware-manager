@@ -8,6 +8,7 @@ edition = "2018"
 members = [ "gtk", "gtk/ffi", "notify", "tools" ]
 
 [features]
+default = [ "fwupd", "system76" ]
 fwupd = [ "fwupd-dbus" ]
 system76 = [ "system76-firmware-daemon" ]
 

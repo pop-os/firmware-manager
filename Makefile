@@ -9,6 +9,8 @@ export CARGO_C_LIBDIR = $(libdir)
 TARGET = debug
 DEBUG ?= 0
 
+ARGS = --no-default-features
+
 ifeq ($(DEBUG),0)
 	TARGET = release
 	ARGS += --release

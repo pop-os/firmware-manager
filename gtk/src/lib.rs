@@ -164,9 +164,9 @@ impl FirmwareWidget {
     /// The `State` input is captured by the receiver's move closure, and therefore retains its
     /// state between executions of the receiver's event loop.
     fn attach_main_event_loop(mut state: State, receiver: glib::Receiver<Event>) {
+        use crate::{Event::*, FirmwareSignal::*, UiEvent::*};
         let mut last_active_revealer = None;
         receiver.attach(None, move |event| {
-            use crate::{Event::*, FirmwareSignal::*, UiEvent::*};
             match event {
                 // When a device begins flashing, we can begin moving the progress bar based on
                 // its duration.
