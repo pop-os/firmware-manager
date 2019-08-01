@@ -43,6 +43,7 @@ enum UiEvent {
     Revealed(Entity, bool),
 }
 
+#[allow(clippy::large_enum_variant)]
 enum Event {
     Firmware(FirmwareSignal),
     Ui(UiEvent),
@@ -348,6 +349,10 @@ impl FirmwareWidget {
             gtk::Continue(true)
         });
     }
+}
+
+impl Default for FirmwareWidget {
+    fn default() -> Self { Self::new() }
 }
 
 impl Drop for FirmwareWidget {

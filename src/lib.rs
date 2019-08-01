@@ -118,6 +118,7 @@ pub struct FwupdSignal {
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum FirmwareSignal {
     /// A device has initiated the flashing process.
     DeviceFlashing(Entity),
@@ -303,6 +304,8 @@ pub fn fwupd_updates(
 
     const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
 
+    // NOTE: This attribute is required due to a clippy bug.
+    #[allow(clippy::identity_conversion)]
     for remote in client.remotes()? {
         if !remote.enabled {
             continue;
@@ -424,8 +427,7 @@ fn systemd_service_is_active(name: &str) -> bool {
 fn lowest_revision<'a, I: Iterator<Item = &'a str>>(mut list: I) -> &'a str {
     use std::cmp::Ordering;
     match list.next() {
-        Some(rev) => {
-            let mut lowest_revision: &str = rev.as_ref();
+        Some(mut lowest_revision) => {
             for rev in list {
                 if human_sort::compare(lowest_revision, &rev) == Ordering::Greater {
                     lowest_revision = &rev;

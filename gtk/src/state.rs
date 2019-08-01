@@ -54,6 +54,7 @@ pub(crate) struct Components {
 }
 
 impl State {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: Sender<FirmwareEvent>,
         ui_sender: glib::Sender<Event>,
@@ -284,7 +285,7 @@ fn reveal<F: FnMut() -> gtk::Container>(
         false
     } else {
         // If the content to be revealed has not been generated yet, do so.
-        if !revealer.get_child().is_some() {
+        if revealer.get_child().is_none() {
             let widget = func();
 
             let container = cascade! {
