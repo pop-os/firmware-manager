@@ -55,7 +55,7 @@ impl FirmwareUpdateDialog {
         };
 
         cascade! {
-            content: dialog.get_content_area();
+            dialog.get_content_area();
             ..set_orientation(gtk::Orientation::Horizontal);
             ..set_border_width(12);
             ..set_spacing(12);
@@ -67,7 +67,7 @@ impl FirmwareUpdateDialog {
                     .build()
             );
             ..add(&cascade! {
-                gtk::Box::new(gtk::Orientation::Vertical, 6);
+                content: gtk::Box::new(gtk::Orientation::Vertical, 6);
                 ..add(
                     &gtk::LabelBuilder::new()
                         .label(&*header_text)
