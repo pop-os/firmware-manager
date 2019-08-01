@@ -1,1 +1,2 @@
-usr/lib
+usr/lib/libfirmware_manager.so
+usr/lib/pkgconfig/firmware_manager.pc
