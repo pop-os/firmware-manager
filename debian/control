@@ -23,6 +23,7 @@ Package: firmware-manager
 Architecture: amd64
 Depends:
   dbus,
+  firmware-manager-notify,
   firmware-manager-shared,
   libgtk-3-0,
   ${misc:Depends},
@@ -34,6 +35,7 @@ Package: firmware-manager-notify
 Architecture: amd64
 Depends:
   dbus,
+  firmware-manager-notify,
   firmware-manager-shared,
   ${misc:Depends},
   ${shlib:Depends}
