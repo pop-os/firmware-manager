@@ -130,14 +130,6 @@ impl DeviceWidget {
 
     /// Activates when the widget's container's button is clicked.
     pub fn connect_upgrade_clicked<F: Fn() + 'static>(&self, func: F) {
-        let progress = self.progress.downgrade();
-        self.button.connect_clicked(move |_| {
-            if let Some(progress) = progress.upgrade() {
-                progress.set_text("Waiting".into());
-                progress.set_fraction(0.0);
-            }
-
-            func();
-        });
+        self.button.connect_clicked(move |_| func());
     }
 }

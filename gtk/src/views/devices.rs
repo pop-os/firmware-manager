@@ -103,6 +103,7 @@ impl DevicesView {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_halign(gtk::Align::Center);
             ..set_margin_top(24);
+            ..set_margin_bottom(24);
             ..add(&system_header);
             ..add(&system_firmware);
             ..add(&device_header);

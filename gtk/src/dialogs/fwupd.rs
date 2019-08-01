@@ -46,7 +46,8 @@ pub(crate) fn fwupd_dialog(
         // Exchange the button for a progress bar.
         if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
             stack.set_visible_child(&progress);
-            progress.set_text("Queued for update".into());
+            progress.set_text("Waiting".into());
+            progress.set_fraction(0.0);
         }
 
         let _ = sender.send(FirmwareEvent::Fwupd(

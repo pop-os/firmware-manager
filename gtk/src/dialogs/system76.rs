@@ -26,7 +26,8 @@ pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool, ha
         // Exchange the button for a progress bar.
         if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
             stack.set_visible_child(&progress);
-            progress.set_text("Queued for update".into());
+            progress.set_text("Waiting".into());
+            progress.set_fraction(0.0);
         }
 
         let event = FirmwareEvent::S76System(*entity, digest.clone(), latest.clone());
