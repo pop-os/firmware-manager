@@ -65,9 +65,8 @@ impl State {
         view_devices: DevicesView,
         view_empty: EmptyView,
     ) -> Self {
-        let has_battery = upower_dbus::UPower::new(-1)
-            .and_then(|upower| upower.on_battery())
-            .unwrap_or(false);
+        let has_battery =
+            upower_dbus::UPower::new(-1).and_then(|upower| upower.on_battery()).unwrap_or(false);
 
         Self {
             entities: Entities::default(),
@@ -294,6 +293,7 @@ fn reveal<F: FnMut() -> gtk::Container>(
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
                 ..set_vexpand(true);
                 ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
+                ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
                 ..add(&widget);
                 ..show_all();
             };

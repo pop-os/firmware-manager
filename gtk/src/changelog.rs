@@ -11,6 +11,7 @@ where
         ..show_all();
     };
 
+    let mut initiated = false;
     changelog.for_each(|(version, entry)| {
         let markdown = if entry.as_ref().is_empty() {
             Cow::Borrowed("No changelog available")
@@ -42,12 +43,13 @@ where
             .margin_end(margin)
             .build();
 
-        changelog_entries.add(&cascade! {
-            gtk::Box::new(gtk::Orientation::Vertical, 12);
-            ..add(&version);
-            ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
-            ..add(&changelog);
-        });
+        if initiated {
+            changelog_entries.add(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        }
+
+        initiated = true;
+        changelog_entries.add(&version);
+        changelog_entries.add(&changelog);
     });
 
     changelog_entries
