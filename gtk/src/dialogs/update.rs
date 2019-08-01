@@ -86,7 +86,7 @@ impl FirmwareUpdateDialog {
                 | if has_battery {
                     content.add(
                         &gtk::LabelBuilder::new()
-                            .label("If you're on a laptop, <b>plug into power</b> before you begin.")
+                            .label("<b>Plug into power</b> before you begin.")
                             .use_markup(true)
                             .xalign(0.0)
                             .build()

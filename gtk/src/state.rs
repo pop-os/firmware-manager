@@ -65,12 +65,14 @@ impl State {
         view_devices: DevicesView,
         view_empty: EmptyView,
     ) -> Self {
+        let has_battery = upower_dbus::UPower::new(-1)
+            .and_then(|upower| upower.on_battery())
+            .unwrap_or(false);
+
         Self {
             entities: Entities::default(),
             components: Components::default(),
-            has_battery: upower_dbus::UPower::new(-1)
-                .map(|upower| upower.on_battery().is_ok())
-                .unwrap_or(false),
+            has_battery,
             progress_sender,
             sender,
             widgets: Widgets { info_bar, info_bar_label, stack, view_devices, view_empty },
