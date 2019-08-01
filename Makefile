@@ -77,7 +77,7 @@ bin-notify $(NOTBINARY): $(STARTUP_DESKTOP) vendor-check
 desktop $(DESKTOP): vendor-check
 	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(APPID) \
-		--name "System76 Firmware" \
+		--name "Firmware Manager" \
 		--icon firmware-manager \
 		--comment "Manage system and device firmware" \
 		--keywords firmware \
@@ -93,7 +93,7 @@ desktop $(DESKTOP): vendor-check
 notify-desktop $(STARTUP_DESKTOP): vendor-check
 	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(NOTIFY_APPID) \
-		--name "System76 Firmware Check" \
+		--name "Firmware Manager Check" \
 		--icon firmware-manager \
 		--comment "Check for firmware updates, and display notification if found" \
 		--categories System \
