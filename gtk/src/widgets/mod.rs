@@ -36,7 +36,6 @@ impl DeviceWidget {
                 .halign(gtk::Align::End)
                 .hexpand(true)
                 .vexpand(true)
-                .margin(9)
                 .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
