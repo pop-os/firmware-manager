@@ -82,14 +82,15 @@ impl State {
     /// An event that occurs when firmware has successfully updated.
     pub fn device_updated(&self, entity: Entity, latest: Box<str>) {
         if let Some(widget) = self.components.device_widgets.get(entity) {
-            widget.progress.set_fraction(1.0);
+            widget.stack.progress.set_fraction(1.0);
             widget.label.set_text(latest.as_ref());
 
             if let Some(upgradeable) = self.components.upgradeable.get(entity) {
                 upgradeable.set(false);
             }
 
-            let _ = self.progress_sender.send(ActivateEvent::Deactivate(widget.progress.clone()));
+            let _ =
+                self.progress_sender.send(ActivateEvent::Deactivate(widget.stack.progress.clone()));
 
             if self.entities.is_system(entity) {
                 crate::reboot();
@@ -125,8 +126,7 @@ impl State {
             entity,
             shared: DialogData {
                 sender: self.sender.clone(),
-                stack: widget.stack.downgrade(),
-                progress: widget.progress.downgrade(),
+                stack: Rc::downgrade(&widget.stack),
                 info,
             },
         });
@@ -183,8 +183,7 @@ impl State {
             changelog,
             shared: DialogData {
                 sender: self.sender.clone(),
-                stack: widget.stack.downgrade(),
-                progress: widget.progress.downgrade(),
+                stack: Rc::downgrade(&widget.stack),
                 info,
             },
         });
@@ -233,19 +232,16 @@ impl State {
 
         let sender = self.sender.clone();
         let tx_progress = self.progress_sender.clone();
-        let stack = widget.stack.downgrade();
-        let progress = widget.progress.downgrade();
+        let stack = Rc::downgrade(&widget.stack);
         let latest: Rc<str> = Rc::from(info.latest);
 
         {
             let latest = Rc::clone(&latest);
             widget.connect_upgrade_clicked(move || {
                 // Exchange the button for a progress bar.
-                if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
-                    stack.set_visible_child(&progress);
-                    progress.set_text("Waiting".into());
-                    progress.set_fraction(0.0);
-                    let _ = tx_progress.send(ActivateEvent::Activate(progress));
+                if let Some(stack) = stack.upgrade() {
+                    stack.switch_to_waiting();
+                    let _ = tx_progress.send(ActivateEvent::Activate(stack.progress.clone()));
                 }
 
                 let _ =

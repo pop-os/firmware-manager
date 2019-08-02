@@ -1,5 +1,28 @@
 use firmware_manager::FirmwareInfo;
 use gtk::prelude::*;
+use std::rc::Rc;
+
+#[derive(Shrinkwrap)]
+pub struct DeviceWidgetStack {
+    #[shrinkwrap(main_field)]
+    pub stack: gtk::Stack,
+    pub button: gtk::Button,
+    pub progress: gtk::ProgressBar,
+    pub waiting: gtk::Label,
+}
+
+impl DeviceWidgetStack {
+    pub fn switch_to_waiting(&self) {
+        self.stack.set_visible_child(&self.waiting);
+        self.progress.set_fraction(0.0);
+    }
+
+    pub fn switch_to_progress(&self, message: &str) {
+        self.stack.set_visible_child(&self.progress);
+        self.progress.set_text(message.into());
+        self.progress.set_fraction(0.0);
+    }
+}
 
 #[derive(Shrinkwrap)]
 pub struct DeviceWidget {
@@ -7,10 +30,8 @@ pub struct DeviceWidget {
     pub container: gtk::Container,
     pub event_box: gtk::EventBox,
     pub revealer: gtk::Revealer,
-    pub button: gtk::Button,
     pub label: gtk::Label,
-    pub progress: gtk::ProgressBar,
-    pub stack: gtk::Stack,
+    pub stack: Rc<DeviceWidgetStack>,
 }
 
 impl DeviceWidget {
@@ -50,10 +71,13 @@ impl DeviceWidget {
             ..pulse();
         };
 
+        let waiting = gtk::LabelBuilder::new().label("Waiting").build();
+
         let stack = cascade! {
             gtk::Stack::new();
             ..add(&button);
             ..add(&progress);
+            ..add(&waiting);
             ..set_visible_child(&button);
         };
 
@@ -110,12 +134,10 @@ impl DeviceWidget {
 
         DeviceWidget {
             container: container.upcast::<gtk::Container>(),
-            button,
             event_box,
             label,
-            progress,
             revealer,
-            stack,
+            stack: Rc::new(DeviceWidgetStack { button, stack, progress, waiting }),
         }
     }
 
@@ -130,6 +152,6 @@ impl DeviceWidget {
 
     /// Activates when the widget's container's button is clicked.
     pub fn connect_upgrade_clicked<F: Fn() + 'static>(&self, func: F) {
-        self.button.connect_clicked(move |_| func());
+        self.stack.button.connect_clicked(move |_| func());
     }
 }

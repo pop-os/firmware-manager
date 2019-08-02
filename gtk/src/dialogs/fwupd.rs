@@ -17,7 +17,7 @@ pub(crate) fn fwupd_dialog(
     upgrade_button: bool,
 ) {
     let &FwupdDialogData { entity, device, releases, shared } = &data;
-    let &DialogData { sender, stack, progress, info } = &shared;
+    let &DialogData { sender, stack, info } = &shared;
 
     let response = if !upgrade_button || device.needs_reboot() {
         let &FirmwareInfo { ref latest, .. } = &info;
@@ -44,10 +44,8 @@ pub(crate) fn fwupd_dialog(
 
     if gtk::ResponseType::Accept == response {
         // Exchange the button for a progress bar.
-        if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
-            stack.set_visible_child(&progress);
-            progress.set_text("Waiting".into());
-            progress.set_fraction(0.0);
+        if let Some(stack) = stack.upgrade() {
+            stack.switch_to_waiting();
         }
 
         let _ = sender.send(FirmwareEvent::Fwupd(

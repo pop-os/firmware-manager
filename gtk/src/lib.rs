@@ -175,11 +175,11 @@ impl FirmwareWidget {
                     let widget = &state.components.device_widgets[entity];
                     let message =
                         if state.entities.is_system(entity) { "Scheduling" } else { "Flashing" };
-                    widget.progress.set_text(message.into());
-                    widget.progress.set_fraction(0.0);
+
+                    widget.stack.switch_to_progress(message);
                     let _ = state
                         .progress_sender
-                        .send(ActivateEvent::Activate(widget.progress.clone()));
+                        .send(ActivateEvent::Activate(widget.stack.progress.clone()));
                 }
                 // An event that occurs when firmware has successfully updated.
                 Firmware(DeviceUpdated(entity, latest)) => state.device_updated(entity, latest),
@@ -187,21 +187,20 @@ impl FirmwareWidget {
                 Firmware(DownloadBegin(entity, size)) => {
                     let widget = &state.components.device_widgets[entity];
                     state.components.firmware_download.insert(entity, (0, size));
-                    widget.progress.set_text("Downloading".into());
-                    widget.progress.set_fraction(0.0);
+                    widget.stack.switch_to_progress("Downloading");
                 }
                 // Firmware for a device has finished downloading.
                 Firmware(DownloadComplete(entity)) => {
                     state.components.firmware_download.remove(entity);
                     let widget = &state.components.device_widgets[entity];
-                    widget.progress.set_fraction(1.0);
+                    widget.stack.progress.set_fraction(1.0);
                 }
                 // Update the progress for the firmware being downloaded.
                 Firmware(DownloadUpdate(entity, downloaded)) => {
                     let widget = &state.components.device_widgets[entity];
                     let progress = &mut state.components.firmware_download[entity];
                     progress.0 += downloaded as u64;
-                    widget.progress.set_fraction(progress.0 as f64 / progress.1 as f64);
+                    widget.stack.progress.set_fraction(progress.0 as f64 / progress.1 as f64);
                 }
                 // An error occurred in the background thread, which we shall display in the UI.
                 Firmware(Error(entity, why)) => {
@@ -220,11 +219,11 @@ impl FirmwareWidget {
 
                     if let Some(entity) = entity {
                         let widget = &state.components.device_widgets[entity];
-                        widget.stack.set_visible_child(&widget.button);
+                        widget.stack.set_visible_child(&widget.stack.button);
                         state.components.firmware_download.remove(entity);
                         let _ = state
                             .progress_sender
-                            .send(ActivateEvent::Deactivate(widget.progress.clone()));
+                            .send(ActivateEvent::Deactivate(widget.stack.progress.clone()));
                     }
                 }
                 // An event that occurs when fwupd firmware is found.

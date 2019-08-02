@@ -13,7 +13,7 @@ pub(crate) struct System76DialogData {
 #[cfg(feature = "system76")]
 pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool, has_battery: bool) {
     let &System76DialogData { entity, digest, changelog, shared } = &data;
-    let &DialogData { sender, stack, progress, info } = &shared;
+    let &DialogData { sender, stack, info } = &shared;
     let &FirmwareInfo { latest, .. } = &info;
 
     let log_entries = changelog.versions.iter().map(|version| {
@@ -24,10 +24,8 @@ pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool, ha
 
     if gtk::ResponseType::Accept == dialog.run() {
         // Exchange the button for a progress bar.
-        if let (Some(stack), Some(progress)) = (stack.upgrade(), progress.upgrade()) {
-            stack.set_visible_child(&progress);
-            progress.set_text("Waiting".into());
-            progress.set_fraction(0.0);
+        if let Some(stack) = stack.upgrade() {
+            stack.switch_to_waiting();
         }
 
         let event = FirmwareEvent::S76System(*entity, digest.clone(), latest.clone());
