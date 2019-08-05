@@ -252,8 +252,8 @@ impl FirmwareWidget {
                 Firmware(SystemScheduled) => reboot(),
                 // An event that occurs when System76 system firmware has been found.
                 #[cfg(feature = "system76")]
-                Firmware(S76System(info, digest, changelog)) => {
-                    state.system76_system(info, digest, changelog)
+                Firmware(S76System(info, data)) => {
+                    state.system76_system(info, data)
                 }
                 // An event that occurs when a Thelio I/O board was discovered.
                 #[cfg(feature = "system76")]

@@ -1,3 +1,5 @@
+// TODO: Further abstract state from the UI, removing the need for Rc, with new component storages.
+
 use crate::{dialogs::*, views::*, widgets::*, ActivateEvent, Event, UiEvent};
 use firmware_manager::*;
 
@@ -110,6 +112,7 @@ impl State {
     #[cfg(feature = "fwupd")]
     pub fn fwupd(&mut self, signal: FwupdSignal) {
         let FwupdSignal { info, device, upgradeable, releases } = signal;
+        let upgradeable = Rc::new(Cell::new(upgradeable));
         let entity = self.entities.create();
         let has_battery = self.has_battery;
 
@@ -120,40 +123,54 @@ impl State {
             self.widgets.view_devices.device(&info)
         };
 
-        let data = Rc::new(FwupdDialogData {
-            device: Arc::new(device),
-            releases,
-            entity,
-            shared: DialogData {
-                sender: self.sender.clone(),
-                stack: Rc::downgrade(&widget.stack),
-                info,
-            },
-        });
+        widget.stack.hide();
 
-        let upgradeable = Rc::new(Cell::new(upgradeable));
+        let data = match info.latest.clone() {
+            Some(latest) => {
+                let data = Rc::new(FwupdDialogData {
+                    device: Arc::new(device),
+                    releases,
+                    entity,
+                    latest,
+                    shared: DialogData {
+                        sender: self.sender.clone(),
+                        stack: Rc::downgrade(&widget.stack),
+                        info,
+                    },
+                });
 
-        if upgradeable.get() {
-            let data = Rc::clone(&data);
-            let upgradeable = Rc::clone(&upgradeable);
-            widget.connect_upgrade_clicked(move || {
-                fwupd_dialog(&data, upgradeable.get(), has_battery, true)
-            });
-        } else {
-            widget.stack.hide();
-        }
+                if upgradeable.get() {
+                    let data = Rc::clone(&data);
+                    let upgradeable = Rc::clone(&upgradeable);
+                    widget.stack.show();
+                    widget.connect_upgrade_clicked(move || {
+                        fwupd_dialog(&data, upgradeable.get(), has_battery, true)
+                    });
+                }
+
+                Some(data)
+            }
+            None => None,
+        };
 
         let sender = self.ui_sender.clone();
         widget.connect_clicked(move |revealer| {
-            reveal(&revealer, &sender, entity, || {
-                let &FwupdDialogData { ref releases, .. } = &*data;
+            let data = &data;
+            reveal(&revealer, &sender, entity, move || {
+                let widget = data.as_ref().map_or_else(
+                    crate::changelog::generate_widget_none,
+                    |data| {
+                        let releases = &data.releases;
+                        let log_entries = releases
+                            .iter()
+                            .rev()
+                            .map(|release| (release.version.as_ref(), release.description.as_ref()));
 
-                let log_entries = releases
-                    .iter()
-                    .rev()
-                    .map(|release| (release.version.as_ref(), release.description.as_ref()));
+                        crate::changelog::generate_widget(log_entries, true)
+                    }
+                );
 
-                crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
+                widget.upcast::<gtk::Container>()
             });
         });
 
@@ -168,51 +185,63 @@ impl State {
     pub fn system76_system(
         &mut self,
         info: FirmwareInfo,
-        digest: System76Digest,
-        changelog: System76Changelog,
+        downloaded: Option<(System76Digest, System76Changelog)>,
     ) {
         let widget = self.widgets.view_devices.system(&info);
+        widget.stack.hide();
         let entity = self.entities.create();
         self.entities.associate_system(entity);
-        let upgradeable = info.current != info.latest;
+
+        let upgradeable = Rc::new(Cell::new(info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())));
         let has_battery = self.has_battery;
 
-        let data = Rc::new(System76DialogData {
-            entity,
-            digest,
-            changelog,
-            shared: DialogData {
-                sender: self.sender.clone(),
-                stack: Rc::downgrade(&widget.stack),
-                info,
-            },
-        });
+        let latest = info.latest.clone();
+        let data = latest
+            .and_then(|latest| downloaded.map(|d| (d, latest)))
+            .map(|((digest, changelog), latest)| {
+                let data = Rc::new(System76DialogData {
+                    entity,
+                    digest,
+                    latest,
+                    changelog,
+                    shared: DialogData {
+                        sender: self.sender.clone(),
+                        stack: Rc::downgrade(&widget.stack),
+                        info,
+                    },
+                });
 
-        let upgradeable = Rc::new(Cell::new(upgradeable));
+                if upgradeable.get() {
+                    widget.stack.show();
+                    let data = Rc::clone(&data);
+                    let upgradeable = Rc::clone(&upgradeable);
+                    widget.connect_upgrade_clicked(move || {
+                        s76_system_dialog(&data, upgradeable.get(), has_battery);
+                    });
+                }
 
-        if upgradeable.get() {
-            let data = Rc::clone(&data);
-            let upgradeable = Rc::clone(&upgradeable);
-            widget.connect_upgrade_clicked(move || {
-                s76_system_dialog(&data, upgradeable.get(), has_battery);
+                data
             });
-        } else {
-            widget.stack.hide();
-        }
 
         let sender = self.ui_sender.clone();
         widget.connect_clicked(move |revealer| {
             reveal(&revealer, &sender, entity, || {
-                let &System76DialogData { ref changelog, .. } = &*data;
+                let widget = if let Some(data) = data.as_ref() {
+                    let changelog = &data.changelog;
 
-                let log_entries = changelog.versions.iter().map(|version| {
-                    (
-                        version.bios.as_ref(),
-                        version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
-                    )
-                });
+                    let log_entries = changelog.versions.iter().map(|version| {
+                        (
+                            version.bios.as_ref(),
+                            version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
+                        )
+                    });
 
-                crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
+                    crate::changelog::generate_widget(log_entries, true)
+                } else {
+                    crate::changelog::generate_widget_none()
+                };
+
+                widget.upcast::<gtk::Container>()
             })
         });
 
@@ -224,19 +253,19 @@ impl State {
 
     /// An event that occurs when a Thelio I/O board was discovered.
     #[cfg(feature = "system76")]
-    pub fn thelio_io(&mut self, info: FirmwareInfo, digest: System76Digest) {
+    pub fn thelio_io(&mut self, info: FirmwareInfo, digest: Option<System76Digest>) {
         let widget = self.widgets.view_devices.device(&info);
         let entity = self.entities.create();
 
-        let upgradeable = info.current != info.latest;
+        let upgradeable = info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref());
 
         let sender = self.sender.clone();
         let tx_progress = self.progress_sender.clone();
         let stack = Rc::downgrade(&widget.stack);
-        let latest: Rc<str> = Rc::from(info.latest);
+        let latest: Option<Rc<str>> = info.latest.map(Rc::from);
 
-        {
-            let latest = Rc::clone(&latest);
+        if let (Some(digest), Some(latest)) = (digest, latest.as_ref()) {
+            let latest = Rc::clone(latest);
             widget.connect_upgrade_clicked(move || {
                 // Exchange the button for a progress bar.
                 if let Some(stack) = stack.upgrade() {
@@ -254,8 +283,12 @@ impl State {
             let sender = self.ui_sender.clone();
             widget.connect_clicked(move |revealer| {
                 reveal(&revealer, &sender, entity, || {
-                    crate::changelog::generate_widget(iter::once((latest.as_ref(), "")), true)
-                        .upcast::<gtk::Container>()
+                    let widget = latest.as_ref().map_or_else(
+                        || crate::changelog::generate_widget_none(),
+                        |latest| crate::changelog::generate_widget(iter::once((latest.as_ref(), "")), true)
+                    );
+                    
+                    widget.upcast::<gtk::Container>()
                 });
             });
         }

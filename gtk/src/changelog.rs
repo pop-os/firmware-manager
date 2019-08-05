@@ -1,6 +1,19 @@
 use gtk::prelude::*;
 use std::borrow::Cow;
 
+pub fn generate_widget_none() -> gtk::Box {
+    gtk::BoxBuilder::new()
+        .margin_start(48)
+        .margin_end(48)
+        .child(
+            &gtk::LabelBuilder::new()
+                .label("No changelog available")
+                .build()
+                .upcast::<gtk::Widget>()
+        )
+        .build()
+}
+
 pub fn generate_widget<I, S>(changelog: I, pad: bool) -> gtk::Box
 where
     S: AsRef<str>,

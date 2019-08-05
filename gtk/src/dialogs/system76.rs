@@ -1,5 +1,5 @@
 use super::{DialogData, FirmwareUpdateDialog};
-use crate::{Entity, FirmwareEvent, FirmwareInfo, System76Changelog, System76Digest};
+use crate::{Entity, FirmwareEvent, System76Changelog, System76Digest};
 use gtk::{self, prelude::*};
 
 #[cfg(feature = "system76")]
@@ -7,14 +7,14 @@ pub(crate) struct System76DialogData {
     pub entity:    Entity,
     pub digest:    System76Digest,
     pub changelog: System76Changelog,
+    pub latest:    Box<str>,
     pub shared:    DialogData,
 }
 
 #[cfg(feature = "system76")]
 pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool, has_battery: bool) {
-    let &System76DialogData { entity, digest, changelog, shared } = &data;
-    let &DialogData { sender, stack, info } = &shared;
-    let &FirmwareInfo { latest, .. } = &info;
+    let &System76DialogData { entity, digest, changelog, latest, shared } = &data;
+    let &DialogData { sender, stack, .. } = &shared;
 
     let log_entries = changelog.versions.iter().map(|version| {
         (version.bios.as_ref(), version.description.as_ref().map_or("", |desc| desc.as_ref()))

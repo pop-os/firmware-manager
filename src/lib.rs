@@ -75,7 +75,7 @@ pub struct FirmwareInfo {
     pub current: Box<str>,
 
     /// The latest version of firmware for this device.
-    pub latest: Box<str>,
+    pub latest: Option<Box<str>>,
 
     // The time required for this firmware to be flashed, in seconds.
     pub install_duration: u32,
@@ -153,11 +153,11 @@ pub enum FirmwareSignal {
 
     /// System76 system firmware was discovered.
     #[cfg(feature = "system76")]
-    S76System(FirmwareInfo, System76Digest, System76Changelog),
+    S76System(FirmwareInfo, Option<(System76Digest, System76Changelog)>),
 
     /// Thelio I/O firmware was discovered.
     #[cfg(feature = "system76")]
-    ThelioIo(FirmwareInfo, System76Digest),
+    ThelioIo(FirmwareInfo, Option<System76Digest>),
 }
 
 /// An event loop that should be run in the background, as this function will block until
@@ -282,7 +282,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
                     info: FirmwareInfo {
                         name:             [&device.vendor, " ", &device.name].concat().into(),
                         current:          device.version.clone(),
-                        latest:           latest.version.clone(),
+                        latest:           Some(latest.version.clone()),
                         install_duration: latest.install_duration,
                     },
                     device,
@@ -333,24 +333,31 @@ pub fn fwupd_updates(
 pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     // Thelio system firmware check.
     let event = match client.bios() {
-        Ok(current) => match client.download() {
-            Ok(S76SystemInfo { digest, changelog }) => {
-                let fw = FirmwareInfo {
-                    name:             current.model,
-                    current:          current.version,
-                    latest:           changelog
+        Ok(current) => {
+            let info = match client.download() {
+                Ok(S76SystemInfo { digest, changelog }) => Some((digest, changelog)),
+                Err(why) => {
+                    eprintln!("failed to download system76 changelog: {:?}", why);
+                    None
+                }
+            };
+
+            let fw = FirmwareInfo {
+                name:             current.model,
+                current:          current.version,
+                latest:           info.as_ref().map(|(_, changelog)| {
+                    changelog
                         .versions
                         .iter()
                         .next()
                         .expect("empty changelog")
                         .bios
-                        .clone(),
-                    install_duration: 1,
-                };
+                        .clone()
+                }),
+                install_duration: 1,
+            };
 
-                FirmwareSignal::S76System(fw, digest, changelog)
-            }
-            Err(why) => FirmwareSignal::Error(None, why.into()),
+            FirmwareSignal::S76System(fw, info)
         },
         Err(why) => FirmwareSignal::Error(None, why.into()),
     };
@@ -363,27 +370,34 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
             if list.is_empty() {
                 None
             } else {
-                match client.thelio_io_download() {
+                let lowest_revision =
+                    lowest_revision(list.iter().map(|(_, rev)| rev.as_ref()));
+                
+                let current = Box::from(if lowest_revision.is_empty() {
+                    "N/A"
+                } else {
+                    lowest_revision
+                });
+
+                let (latest, digest) = match client.thelio_io_download() {
                     Ok(info) => {
                         let ThelioIoInfo { digest, revision } = info;
-                        let lowest_revision =
-                            lowest_revision(list.iter().map(|(_, rev)| rev.as_ref()));
-
-                        let fw = FirmwareInfo {
-                            name:             "Thelio I/O".into(),
-                            current:          Box::from(if lowest_revision.is_empty() {
-                                "N/A"
-                            } else {
-                                lowest_revision
-                            }),
-                            latest:           revision,
-                            install_duration: 15,
-                        };
-
-                        Some(FirmwareSignal::ThelioIo(fw, digest))
+                        (Some(revision), Some(digest))
                     }
-                    Err(why) => Some(FirmwareSignal::Error(None, why.into())),
-                }
+                    Err(why) => {
+                        eprintln!("failed to download Thelio I/O digest: {}", why);
+                        (None, None)
+                    },
+                };
+
+                let fw = FirmwareInfo {
+                    name:             "Thelio I/O".into(),
+                    current,
+                    latest,
+                    install_duration: 15,
+                };
+
+                Some(FirmwareSignal::ThelioIo(fw, digest))
             }
         }
         Err(why) => Some(FirmwareSignal::Error(None, why.into())),

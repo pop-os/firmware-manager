@@ -1,5 +1,5 @@
 use super::{DialogData, FirmwareUpdateDialog};
-use crate::{Entity, FirmwareEvent, FirmwareInfo, FwupdDevice, FwupdRelease};
+use crate::{Entity, FirmwareEvent, FwupdDevice, FwupdRelease};
 use gtk::{self, prelude::*};
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -7,7 +7,8 @@ pub(crate) struct FwupdDialogData {
     pub entity:   Entity,
     pub device:   Arc<FwupdDevice>,
     pub releases: BTreeSet<FwupdRelease>,
-    pub shared:   DialogData,
+    pub shared:    DialogData,
+    pub latest:   Box<str>,
 }
 
 pub(crate) fn fwupd_dialog(
@@ -16,11 +17,10 @@ pub(crate) fn fwupd_dialog(
     has_battery: bool,
     upgrade_button: bool,
 ) {
-    let &FwupdDialogData { entity, device, releases, shared } = &data;
-    let &DialogData { sender, stack, info } = &shared;
+    let &FwupdDialogData { entity, device, releases, latest, shared } = &data;
+    let &DialogData { sender, stack, .. } = &shared;
 
     let response = if !upgrade_button || device.needs_reboot() {
-        let &FirmwareInfo { ref latest, .. } = &info;
 
         let log_entries = releases
             .iter()
