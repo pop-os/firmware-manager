@@ -1,0 +1,18 @@
+[package]
+name = "firmware-manager-notify"
+version = "0.1.0"
+authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
+edition = "2018"
+
+[features]
+default = [ "fwupd", "system76" ]
+system76 = []
+fwupd = []
+
+[build-dependencies]
+markup = "0.3"
+
+[dependencies]
+err-derive = "0.1.5"
+notify-rust = "3.6.0"
+reqwest = "0.9.19"

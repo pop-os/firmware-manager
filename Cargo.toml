@@ -21,5 +21,5 @@ fwupd-dbus = { git = "https://github.com/pop-os/fwupd-dbus", optional = true }
 system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware", branch = "firmware-client", optional = true }
 slotmap = "0.3.0"
 shrinkwraprs = "0.2.1"
-reqwest = "0.9.18"
+reqwest = "0.9.19"
 human-sort = "0.2.2"

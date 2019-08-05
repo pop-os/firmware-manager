@@ -1,0 +1,22 @@
+[package]
+name = "firmware-manager-gtk"
+version = "0.1.0"
+authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
+edition = "2018"
+
+[features]
+default = [ "fwupd", "system76" ]
+fwupd = []
+system76 = []
+
+[dependencies]
+cascade = "0.1"
+err-derive = "0.1"
+gio = "0.7"
+glib = "0.8"
+gtk = { version = "0.7.0", features = [ "v3_22" ] }
+shrinkwraprs = "0.2"
+slotmap = "0.3"
+html2runes = "1.0"
+gdk = "0.11.0"
+upower_dbus = "0.1.0"

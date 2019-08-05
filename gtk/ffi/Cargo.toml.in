@@ -1,0 +1,14 @@
+[package]
+name = "firmware-manager-gtk-ffi"
+version = "0.1.0"
+authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
+edition = "2018"
+
+[lib]
+name = "firmware_manager"
+crate-type = [ "cdylib" ]
+
+[dependencies]
+glib = "0.8"
+gtk-sys = "0.9"
+gtk = "0.7"
