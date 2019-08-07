@@ -76,16 +76,20 @@ impl FirmwareWidget {
             ..show();
         };
 
+        let sender1 = sender.clone();
+        let sender2 = sender.clone();
         let info_bar = cascade! {
             gtk::InfoBar::new();
             ..set_message_type(gtk::MessageType::Error);
             ..set_show_close_button(true);
             ..set_valign(gtk::Align::Start);
-            ..connect_close(|info_bar| {
+            ..connect_close(move |info_bar| {
                 info_bar.set_visible(false);
+                let _ = sender1.send(FirmwareEvent::Scan);
             });
-            ..connect_response(|info_bar, _| {
+            ..connect_response(move |info_bar, _| {
                 info_bar.set_visible(false);
+                let _ = sender2.send(FirmwareEvent::Scan);
             });
             ..set_no_show_all(true);
         };
