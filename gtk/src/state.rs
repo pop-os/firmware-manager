@@ -4,13 +4,8 @@ use crate::{dialogs::*, views::*, widgets::*, ActivateEvent, Event, UiEvent};
 use firmware_manager::*;
 
 use gtk::prelude::*;
-use slotmap::{DefaultKey as Entity, SecondaryMap};
-use std::{
-    cell::Cell,
-    iter,
-    rc::Rc,
-    sync::{mpsc::Sender, Arc},
-};
+use slotmap::{DefaultKey as Entity, SecondaryMap, SparseSecondaryMap};
+use std::{collections::BTreeSet, sync::mpsc::Sender};
 
 /// Manages all state and state interactions with the UI.
 pub(crate) struct State {
@@ -49,10 +44,24 @@ pub(crate) struct Widgets {
 pub(crate) struct Components {
     /// The GTK widgets associated with a device are stored here.
     pub(crate) device_widgets: SecondaryMap<Entity, DeviceWidget>,
-    /// Remembers if a device is upgradeable or not
-    pub(crate) upgradeable: SecondaryMap<Entity, Rc<Cell<bool>>>,
+
     /// Tracks progress of a firmware download.
     pub(crate) firmware_download: SecondaryMap<Entity, (u64, u64)>,
+
+    /// The latest version associated with a device, if one exists.
+    pub(crate) latest: SecondaryMap<Entity, Box<str>>,
+
+    /// Details about a fwupd device
+    #[cfg(feature = "fwupd")]
+    pub(crate) fwupd: SparseSecondaryMap<Entity, (FwupdDevice, BTreeSet<FwupdRelease>)>,
+
+    /// Details about system76 system firmware.
+    #[cfg(feature = "system76")]
+    pub(crate) system76: SparseSecondaryMap<Entity, (System76Digest, System76Changelog)>,
+
+    /// Details about thelio I/O firmware
+    #[cfg(feature = "system76")]
+    pub(crate) thelio: SparseSecondaryMap<Entity, System76Digest>,
 }
 
 impl State {
@@ -82,14 +91,10 @@ impl State {
     }
 
     /// An event that occurs when firmware has successfully updated.
-    pub fn device_updated(&self, entity: Entity, latest: Box<str>) {
+    pub fn device_updated(&mut self, entity: Entity, latest: Box<str>) {
         if let Some(widget) = self.components.device_widgets.get(entity) {
             widget.stack.progress.set_fraction(1.0);
             widget.label.set_text(latest.as_ref());
-
-            if let Some(upgradeable) = self.components.upgradeable.get(entity) {
-                upgradeable.set(false);
-            }
 
             let _ =
                 self.progress_sender.send(ActivateEvent::Deactivate(widget.stack.progress.clone()));
@@ -112,9 +117,8 @@ impl State {
     #[cfg(feature = "fwupd")]
     pub fn fwupd(&mut self, signal: FwupdSignal) {
         let FwupdSignal { info, device, upgradeable, releases } = signal;
-        let upgradeable = Rc::new(Cell::new(upgradeable));
+
         let entity = self.entities.create();
-        let has_battery = self.has_battery;
 
         let widget = if device.needs_reboot() {
             self.entities.associate_system(entity);
@@ -125,59 +129,73 @@ impl State {
 
         widget.stack.hide();
 
-        let data = match info.latest.clone() {
-            Some(latest) => {
-                let data = Rc::new(FwupdDialogData {
-                    device: Arc::new(device),
-                    releases,
-                    entity,
-                    latest,
-                    shared: DialogData {
-                        sender: self.sender.clone(),
-                        stack: Rc::downgrade(&widget.stack),
-                        info,
-                    },
+        if let Some(latest) = info.latest {
+            self.components.latest.insert(entity, latest);
+            self.components.fwupd.insert(entity, (device, releases));
+            if upgradeable {
+                let sender = self.ui_sender.clone();
+                widget.stack.show();
+                widget.connect_upgrade_clicked(move || {
+                    let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
                 });
-
-                if upgradeable.get() {
-                    let data = Rc::clone(&data);
-                    let upgradeable = Rc::clone(&upgradeable);
-                    widget.stack.show();
-                    widget.connect_upgrade_clicked(move || {
-                        fwupd_dialog(&data, upgradeable.get(), has_battery, true)
-                    });
-                }
-
-                Some(data)
             }
-            None => None,
-        };
+        }
 
         let sender = self.ui_sender.clone();
-        widget.connect_clicked(move |revealer| {
-            let data = &data;
-            reveal(&revealer, &sender, entity, move || {
-                let widget = data.as_ref().map_or_else(
-                    crate::changelog::generate_widget_none,
-                    |data| {
-                        let releases = &data.releases;
-                        let log_entries = releases
-                            .iter()
-                            .rev()
-                            .map(|release| (release.version.as_ref(), release.description.as_ref()));
-
-                        crate::changelog::generate_widget(log_entries, true)
-                    }
-                );
-
-                widget.upcast::<gtk::Container>()
-            });
+        widget.connect_clicked(move |_| {
+            let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
         });
 
         self.components.device_widgets.insert(entity, widget);
-        self.components.upgradeable.insert(entity, upgradeable);
         self.widgets.stack.show();
         self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
+    }
+
+    /// Reveals a widget's changelog in a revealer, and generate that changelog if it has not been
+    /// revealed yet.
+    pub fn reveal(&mut self, entity: Entity) {
+        let widget = &self.components.device_widgets[entity];
+        let revealer = &widget.revealer;
+        let sender = &self.ui_sender;
+
+        #[cfg(feature = "fwupd")]
+        {
+            if let Some((_, releases)) = self.components.fwupd.get(entity) {
+                reveal(revealer, sender, entity, move || {
+                    let releases = &releases;
+                    let log_entries = releases
+                        .iter()
+                        .rev()
+                        .map(|release| (release.version.as_ref(), release.description.as_ref()));
+
+                    crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
+                });
+
+                return;
+            }
+        }
+
+        #[cfg(feature = "system76")]
+        {
+            if let Some((_, changelog)) = self.components.system76.get(entity) {
+                reveal(revealer, &sender, entity, || {
+                    let log_entries = changelog.versions.iter().map(|version| {
+                        (
+                            version.bios.as_ref(),
+                            version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
+                        )
+                    });
+
+                    crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
+                });
+
+                return;
+            }
+        }
+
+        reveal(revealer, &sender, entity, || {
+            crate::changelog::generate_widget_none().upcast::<gtk::Container>()
+        });
     }
 
     /// An event that occurs when System76 system firmware has been found.
@@ -192,61 +210,27 @@ impl State {
         let entity = self.entities.create();
         self.entities.associate_system(entity);
 
-        let upgradeable = Rc::new(Cell::new(info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())));
-        let has_battery = self.has_battery;
-
-        let latest = info.latest.clone();
-        let data = latest
-            .and_then(|latest| downloaded.map(|d| (d, latest)))
-            .map(|((digest, changelog), latest)| {
-                let data = Rc::new(System76DialogData {
-                    entity,
-                    digest,
-                    latest,
-                    changelog,
-                    shared: DialogData {
-                        sender: self.sender.clone(),
-                        stack: Rc::downgrade(&widget.stack),
-                        info,
-                    },
+        if let Some(latest) = info.latest {
+            if latest.as_ref() != info.current.as_ref() {
+                widget.stack.show();
+                let sender = self.ui_sender.clone();
+                widget.connect_upgrade_clicked(move || {
+                    let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
                 });
+            }
 
-                if upgradeable.get() {
-                    widget.stack.show();
-                    let data = Rc::clone(&data);
-                    let upgradeable = Rc::clone(&upgradeable);
-                    widget.connect_upgrade_clicked(move || {
-                        s76_system_dialog(&data, upgradeable.get(), has_battery);
-                    });
-                }
-
-                data
-            });
+            self.components.latest.insert(entity, latest);
+            if let Some(data) = downloaded {
+                self.components.system76.insert(entity, data);
+            }
+        }
 
         let sender = self.ui_sender.clone();
-        widget.connect_clicked(move |revealer| {
-            reveal(&revealer, &sender, entity, || {
-                let widget = if let Some(data) = data.as_ref() {
-                    let changelog = &data.changelog;
-
-                    let log_entries = changelog.versions.iter().map(|version| {
-                        (
-                            version.bios.as_ref(),
-                            version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
-                        )
-                    });
-
-                    crate::changelog::generate_widget(log_entries, true)
-                } else {
-                    crate::changelog::generate_widget_none()
-                };
-
-                widget.upcast::<gtk::Container>()
-            })
+        widget.connect_clicked(move |_| {
+            let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
         });
 
         self.components.device_widgets.insert(entity, widget);
-        self.components.upgradeable.insert(entity, upgradeable);
         self.widgets.stack.show();
         self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
     }
@@ -257,39 +241,24 @@ impl State {
         let widget = self.widgets.view_devices.device(&info);
         let entity = self.entities.create();
 
-        let upgradeable = info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref());
+        let sender = self.ui_sender.clone();
+        let mut upgradeable = false;
 
-        let sender = self.sender.clone();
-        let tx_progress = self.progress_sender.clone();
-        let stack = Rc::downgrade(&widget.stack);
-        let latest: Option<Rc<str>> = info.latest.map(Rc::from);
-
-        if let (Some(digest), Some(latest)) = (digest, latest.as_ref()) {
-            let latest = Rc::clone(latest);
+        if let (Some(digest), Some(latest)) = (digest, info.latest) {
+            upgradeable = info.current.as_ref() != latest.as_ref();
             widget.connect_upgrade_clicked(move || {
-                // Exchange the button for a progress bar.
-                if let Some(stack) = stack.upgrade() {
-                    stack.switch_to_waiting();
-                    let _ = tx_progress.send(ActivateEvent::Activate(stack.progress.clone()));
-                }
-
-                let _ =
-                    sender.send(FirmwareEvent::ThelioIo(entity, digest.clone(), (&*latest).into()));
+                let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
             });
+
+            self.components.latest.insert(entity, latest);
+            self.components.thelio.insert(entity, digest);
         }
 
         {
             // When the device's widget is clicked.
             let sender = self.ui_sender.clone();
-            widget.connect_clicked(move |revealer| {
-                reveal(&revealer, &sender, entity, || {
-                    let widget = latest.as_ref().map_or_else(
-                        || crate::changelog::generate_widget_none(),
-                        |latest| crate::changelog::generate_widget(iter::once((latest.as_ref(), "")), true)
-                    );
-                    
-                    widget.upcast::<gtk::Container>()
-                });
+            widget.connect_clicked(move |_| {
+                let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
             });
         }
 
@@ -298,10 +267,67 @@ impl State {
         } else {
             widget.stack.hide();
         }
+
         self.components.device_widgets.insert(entity, widget);
 
         self.widgets.stack.show();
         self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
+    }
+
+    /// Schedules the given firmware for an update, and show a dialog if it requires a reboot.
+    pub fn update(&mut self, entity: Entity) {
+        if let Some(latest) = self.components.latest.get(entity) {
+            let widgets = &self.components.device_widgets[entity];
+
+            #[cfg(feature = "fwupd")]
+            {
+                if let Some((device, releases)) = self.components.fwupd.get(entity) {
+                    let dialog = FwupdDialog {
+                        device: &device,
+                        entity,
+                        has_battery: self.has_battery,
+                        latest: &latest,
+                        needs_reboot: self.entities.is_system(entity),
+                        releases: &releases,
+                        sender: &self.sender,
+                        widgets,
+                    };
+
+                    dialog.run();
+
+                    return;
+                }
+            }
+
+            #[cfg(feature = "system76")]
+            {
+                if let Some((digest, changelog)) = self.components.system76.get(entity) {
+                    let dialog = System76Dialog {
+                        changelog: &changelog,
+                        digest: &digest,
+                        entity,
+                        has_battery: self.has_battery,
+                        latest: &latest,
+                        sender: &self.sender,
+                        widgets,
+                    };
+
+                    dialog.run();
+                } else if let Some(digest) = self.components.thelio.get(entity) {
+                    // Exchange the button for a progress bar.
+                    widgets.stack.switch_to_waiting();
+                    let _ = self
+                        .progress_sender
+                        .send(ActivateEvent::Activate(widgets.stack.progress.clone()));
+
+                    let _ = self.sender.send(FirmwareEvent::ThelioIo(entity, digest.clone()));
+                }
+            }
+        } else {
+            eprintln!(
+                "attempted to update firmware for a device which did not have updated firmware"
+            );
+        }
     }
 }
 

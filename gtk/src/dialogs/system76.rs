@@ -1,36 +1,35 @@
-use super::{DialogData, FirmwareUpdateDialog};
-use crate::{Entity, FirmwareEvent, System76Changelog, System76Digest};
-use gtk::{self, prelude::*};
+use super::FirmwareUpdateDialog;
+use crate::widgets::DeviceWidget;
+use firmware_manager::{Entity, FirmwareEvent, System76Changelog, System76Digest};
+use gtk::prelude::*;
+use std::sync::mpsc::Sender;
 
-#[cfg(feature = "system76")]
-pub(crate) struct System76DialogData {
-    pub entity:    Entity,
-    pub digest:    System76Digest,
-    pub changelog: System76Changelog,
-    pub latest:    Box<str>,
-    pub shared:    DialogData,
+pub struct System76Dialog<'a> {
+    pub changelog:   &'a System76Changelog,
+    pub digest:      &'a System76Digest,
+    pub entity:      Entity,
+    pub has_battery: bool,
+    pub latest:      &'a str,
+    pub sender:      &'a Sender<FirmwareEvent>,
+    pub widgets:     &'a DeviceWidget,
 }
 
-#[cfg(feature = "system76")]
-pub(crate) fn s76_system_dialog(data: &System76DialogData, upgradeable: bool, has_battery: bool) {
-    let &System76DialogData { entity, digest, changelog, latest, shared } = &data;
-    let &DialogData { sender, stack, .. } = &shared;
+impl<'a> System76Dialog<'a> {
+    pub fn run(self) {
+        let log_entries = self.changelog.versions.iter().map(|version| {
+            (version.bios.as_ref(), version.description.as_ref().map_or("", |desc| desc.as_ref()))
+        });
 
-    let log_entries = changelog.versions.iter().map(|version| {
-        (version.bios.as_ref(), version.description.as_ref().map_or("", |desc| desc.as_ref()))
-    });
+        let dialog = FirmwareUpdateDialog::new(self.latest, log_entries, self.has_battery);
 
-    let dialog = FirmwareUpdateDialog::new(latest, log_entries, upgradeable, true, has_battery);
+        dialog.destroy();
 
-    if gtk::ResponseType::Accept == dialog.run() {
-        // Exchange the button for a progress bar.
-        if let Some(stack) = stack.upgrade() {
-            stack.switch_to_waiting();
+        if gtk::ResponseType::Accept == dialog.run() {
+            // Exchange the button for a progress bar.
+            self.widgets.stack.switch_to_waiting();
+
+            let event = FirmwareEvent::S76System(self.entity, self.digest.clone());
+            let _ = self.sender.send(event);
         }
-
-        let event = FirmwareEvent::S76System(*entity, digest.clone(), latest.clone());
-        let _ = sender.send(event);
     }
-
-    dialog.destroy();
 }

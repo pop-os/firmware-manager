@@ -16,9 +16,12 @@ pub use system76_firmware_daemon::{
 #[cfg(feature = "system76")]
 pub use system76_firmware_daemon::Client as System76Client;
 
-use slotmap::{DefaultKey as Entity, SecondaryMap, SlotMap};
+pub use slotmap::DefaultKey as Entity;
+
+use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
     collections::BTreeSet,
+    error::Error as _,
     process::Command,
     sync::{mpsc::Receiver, Arc},
 };
@@ -55,14 +58,14 @@ pub enum FirmwareEvent {
 
     /// Upgrade system firmware for System76 systems.
     #[cfg(feature = "system76")]
-    S76System(Entity, System76Digest, Box<str>),
+    S76System(Entity, System76Digest),
 
     /// Search for available firmware devices.
     Scan,
 
     /// Upgrade the firmware of Thelio I/O boarods.
     #[cfg(feature = "system76")]
-    ThelioIo(Entity, System76Digest, Box<str>),
+    ThelioIo(Entity, System76Digest),
 }
 
 /// Information about a device and its current and latest firmware.
@@ -88,7 +91,7 @@ pub struct Entities {
     pub entities: SlotMap<Entity, ()>,
 
     /// Secondary storage to keep record of all system devices.
-    pub system: SecondaryMap<Entity, ()>,
+    pub system: SparseSecondaryMap<Entity, ()>,
 }
 
 impl Entities {
@@ -124,7 +127,7 @@ pub enum FirmwareSignal {
     DeviceFlashing(Entity),
 
     /// A device was updated
-    DeviceUpdated(Entity, Box<str>),
+    DeviceUpdated(Entity),
 
     /// Signals that the entity's firmware is being downloaded.
     DownloadBegin(Entity, u64),
@@ -221,7 +224,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                         }),
                     )
                 }) {
-                    Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity, release.version.clone()),
+                    Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity),
                     Some(Err(why)) => FirmwareSignal::Error(Some(entity), why.into()),
                     None => panic!("fwupd event assigned to non-fwupd button"),
                 };
@@ -229,7 +232,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 sender(event);
             }
             #[cfg(feature = "system76")]
-            FirmwareEvent::S76System(entity, digest, _latest) => {
+            FirmwareEvent::S76System(entity, digest) => {
                 match s76.as_ref().map(|client| client.schedule(&digest)) {
                     Some(Ok(_)) => sender(FirmwareSignal::SystemScheduled),
                     Some(Err(why)) => sender(FirmwareSignal::Error(Some(entity), why.into())),
@@ -237,11 +240,10 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 }
             }
             #[cfg(feature = "system76")]
-            FirmwareEvent::ThelioIo(entity, digest, latest) => {
-                eprintln!("updating thelio I/O to {}", latest);
+            FirmwareEvent::ThelioIo(entity, digest) => {
                 sender(FirmwareSignal::DeviceFlashing(entity));
                 let event = match s76.as_ref().map(|client| client.thelio_io_update(&digest)) {
-                    Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity, latest),
+                    Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity),
                     Some(Err(why)) => FirmwareSignal::Error(Some(entity), why.into()),
                     None => panic!("thelio event assigned to non-thelio button"),
                 };
@@ -319,7 +321,16 @@ pub fn fwupd_updates(
             if update {
                 eprintln!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
                 if let Err(why) = remote.update_metadata(client, http) {
-                    eprintln!("failed to fetch updates from {}: {}", remote.filename_cache, why);
+                    let mut error_message = format!("{}", why);
+                    let mut cause = why.source();
+                    while let Some(error) = cause {
+                        error_message.push_str(format!(": {}", error).as_str());
+                        cause = error.source();
+                    }
+                    eprintln!(
+                        "failed to fetch updates from {}: {:?}",
+                        remote.filename_cache, error_message
+                    );
                 }
             }
         }
@@ -337,7 +348,13 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
             let info = match client.download() {
                 Ok(S76SystemInfo { digest, changelog }) => Some((digest, changelog)),
                 Err(why) => {
-                    eprintln!("failed to download system76 changelog: {:?}", why);
+                    let mut error_message = format!("{}", why);
+                    let mut cause = why.source();
+                    while let Some(error) = cause {
+                        error_message.push_str(format!(": {}", error).as_str());
+                        cause = error.source();
+                    }
+                    eprintln!("failed to download system76 changelog: {}", error_message);
                     None
                 }
             };
@@ -346,19 +363,13 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                 name:             current.model,
                 current:          current.version,
                 latest:           info.as_ref().map(|(_, changelog)| {
-                    changelog
-                        .versions
-                        .iter()
-                        .next()
-                        .expect("empty changelog")
-                        .bios
-                        .clone()
+                    changelog.versions.iter().next().expect("empty changelog").bios.clone()
                 }),
                 install_duration: 1,
             };
 
             FirmwareSignal::S76System(fw, info)
-        },
+        }
         Err(why) => FirmwareSignal::Error(None, why.into()),
     };
 
@@ -370,14 +381,10 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
             if list.is_empty() {
                 None
             } else {
-                let lowest_revision =
-                    lowest_revision(list.iter().map(|(_, rev)| rev.as_ref()));
-                
-                let current = Box::from(if lowest_revision.is_empty() {
-                    "N/A"
-                } else {
-                    lowest_revision
-                });
+                let lowest_revision = lowest_revision(list.iter().map(|(_, rev)| rev.as_ref()));
+
+                let current =
+                    Box::from(if lowest_revision.is_empty() { "N/A" } else { lowest_revision });
 
                 let (latest, digest) = match client.thelio_io_download() {
                     Ok(info) => {
@@ -385,13 +392,13 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                         (Some(revision), Some(digest))
                     }
                     Err(why) => {
-                        eprintln!("failed to download Thelio I/O digest: {}", why);
+                        eprintln!("failed to download Thelio I/O digest: {:?}", why);
                         (None, None)
-                    },
+                    }
                 };
 
                 let fw = FirmwareInfo {
-                    name:             "Thelio I/O".into(),
+                    name: "Thelio I/O".into(),
                     current,
                     latest,
                     install_duration: 15,

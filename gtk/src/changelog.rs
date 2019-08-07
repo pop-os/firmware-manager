@@ -9,7 +9,7 @@ pub fn generate_widget_none() -> gtk::Box {
             &gtk::LabelBuilder::new()
                 .label("No changelog available")
                 .build()
-                .upcast::<gtk::Widget>()
+                .upcast::<gtk::Widget>(),
         )
         .build()
 }

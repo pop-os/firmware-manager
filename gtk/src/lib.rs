@@ -12,7 +12,6 @@ mod widgets;
 
 use self::{state::State, views::*};
 use firmware_manager::*;
-
 use gtk::{self, prelude::*};
 use slotmap::DefaultKey as Entity;
 use std::{
@@ -39,8 +38,14 @@ pub struct FirmwareWidget {
 }
 
 enum UiEvent {
+    /// It was requested to hide the upgrade stack of an entity
     HideStack(Entity),
+    /// An entity is scheduled to be revealed
+    Reveal(Entity),
+    /// An entity has been revealed
     Revealed(Entity, bool),
+    /// The update button of an entity was triggered
+    Update(Entity),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -182,7 +187,10 @@ impl FirmwareWidget {
                         .send(ActivateEvent::Activate(widget.stack.progress.clone()));
                 }
                 // An event that occurs when firmware has successfully updated.
-                Firmware(DeviceUpdated(entity, latest)) => state.device_updated(entity, latest),
+                Firmware(DeviceUpdated(entity)) => {
+                    let latest = state.components.latest.remove(entity);
+                    state.device_updated(entity, latest.expect("updated device without version"))
+                }
                 // Firmware for a device has begun downloading.
                 Firmware(DownloadBegin(entity, size)) => {
                     let widget = &state.components.device_widgets[entity];
@@ -252,18 +260,22 @@ impl FirmwareWidget {
                 Firmware(SystemScheduled) => reboot(),
                 // An event that occurs when System76 system firmware has been found.
                 #[cfg(feature = "system76")]
-                Firmware(S76System(info, data)) => {
-                    state.system76_system(info, data)
-                }
+                Firmware(S76System(info, data)) => state.system76_system(info, data),
                 // An event that occurs when a Thelio I/O board was discovered.
                 #[cfg(feature = "system76")]
                 Firmware(ThelioIo(info, digest)) => state.thelio_io(info, digest),
+                // Schedules the given firmware for an update, and show a dialog if it requires a
+                // reboot.
+                Ui(Update(entity)) => state.update(entity),
                 // Hides the entity's stack.
                 Ui(HideStack(entity)) => {
                     if let Some(widget) = state.components.device_widgets.get(entity) {
                         widget.stack.hide();
                     }
                 }
+                // Reveals a widget's changelog in a revealer, and generate that changelog if it has
+                // not been revealed yet.
+                Ui(Reveal(entity)) => state.reveal(entity),
                 // Signals that an entity's revealer has been revealed, and so we should hide the
                 // last-active revealer.
                 Ui(Revealed(entity, revealed)) => {
