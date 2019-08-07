@@ -186,9 +186,7 @@ impl FirmwareWidget {
                         if state.entities.is_system(entity) { "Scheduling" } else { "Flashing" };
 
                     widget.stack.switch_to_progress(message);
-                    let _ = state
-                        .progress_sender
-                        .send(ActivateEvent::Activate(widget.stack.progress.clone()));
+                    state.progress_activate(&widget.stack.progress);
                 }
                 // An event that occurs when firmware has successfully updated.
                 Firmware(DeviceUpdated(entity)) => {
@@ -233,9 +231,7 @@ impl FirmwareWidget {
                         let widget = &state.components.device_widgets[entity];
                         widget.stack.set_visible_child(&widget.stack.button);
                         state.components.firmware_download.remove(entity);
-                        let _ = state
-                            .progress_sender
-                            .send(ActivateEvent::Deactivate(widget.stack.progress.clone()));
+                        state.progress_deactivate(&widget.stack.progress);
                     }
                 }
                 // An event that occurs when fwupd firmware is found.

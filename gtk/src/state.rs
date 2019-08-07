@@ -103,9 +103,7 @@ impl State {
             widget.stack.progress.set_fraction(1.0);
             widget.label.set_text(latest.as_ref());
 
-            let _ =
-                self.progress_sender.send(ActivateEvent::Deactivate(widget.stack.progress.clone()));
-
+            self.progress_deactivate(&widget.stack.progress);
             if self.entities.is_system(entity) {
                 crate::reboot();
             }
@@ -155,6 +153,18 @@ impl State {
         });
     }
 
+    /// Activates progress bar handling for the given widget.
+    pub fn progress_activate(&self, progress: &gtk::ProgressBar) {
+        let event = ActivateEvent::Activate(progress.clone());
+        let _ = self.progress_sender.send(event);
+    }
+
+    /// Deactivates progress bar handling for the given widget.
+    pub fn progress_deactivate(&self, progress: &gtk::ProgressBar) {
+        let event = ActivateEvent::Deactivate(progress.clone());
+        let _ = self.progress_sender.send(event);
+    }
+
     /// Reveals a widget's changelog in a revealer, and generate that changelog if it has not been
     /// revealed yet.
     pub fn reveal(&mut self, entity: Entity) {
@@ -197,6 +207,7 @@ impl State {
             }
         }
 
+        // When changelog information is not available.
         reveal(revealer, &sender, entity, || {
             crate::changelog::generate_widget_none().upcast::<gtk::Container>()
         });
@@ -317,10 +328,7 @@ impl State {
                 } else if let Some(digest) = self.components.thelio.get(entity) {
                     // Exchange the button for a progress bar.
                     widgets.stack.switch_to_waiting();
-                    let _ = self
-                        .progress_sender
-                        .send(ActivateEvent::Activate(widgets.stack.progress.clone()));
-
+                    self.progress_activate(&widgets.stack.progress);
                     let _ = self.sender.send(FirmwareEvent::ThelioIo(entity, digest.clone()));
                 }
             }
