@@ -1,5 +1,3 @@
-// TODO: Further abstract state from the UI, removing the need for Rc, with new component storages.
-
 use crate::{dialogs::*, views::*, widgets::*, ActivateEvent, Event, UiEvent};
 use firmware_manager::*;
 
