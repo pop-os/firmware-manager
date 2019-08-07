@@ -34,11 +34,11 @@ Like all of our projects today, it is written in Rust, and adheres to current be
         * firmware-manager-gtk-ffi
 ```
 
-The `firmware-manager-gtk` member of the project provides the firmware widget as a library, and an application which places that widget into a window. This member contains a C FFI sub-member, which builds a dynamic library with a C API and header, and can be used to integrate the widget into any GTK application written in C. The included GTK application statically-links the Rust widget library.
+The `firmware-manager` library provides functions for scanning firmware, and an event loop which receives and sends signals through channels. This is designed to be run in a background thread to prevent a UI that uses the firmware manager from blocking as requests are being processed. Additionally, the event API is expected to be used with the provided `slotmap`-based entity-component architecture. This allows a frontend to assign entity IDs to their requests, and receive those entity IDs back in responses. In doing so, frontends can avoid the need for complex runtime reference-counnting, or creating reference cycles.
+
+The `firmware-manager-gtk` member of the project provides the firmware widget as a library, and an application which places that widget into a window. This member contains a C FFI sub-member, which builds a dynamic library with a C API and header, and can be used to integrate the widget into any GTK application written in C. The included GTK application statically-links the Rust widget library. This implementation takes full advantage of the slotmap EC, assigning its own component storages to keep track of state relative to a device entity, such as the widgets assigned to an entity, and information about their firmware.
 
 The `firmware-manager-notify` member comes with a systemd user timer so that it is executed at login, and then periodically run again at set intervals to check for updates again. When updates are found, a clickable notification will be displayed, which will either open the Firmware panel in GNOME Settings, or the standalone desktop application, depending on which is available on the system.
-
-The `firmware-manager` library provides functions for scanning firmware, and an event loop which receives and sends signals through channels. This is designed to be run in a background thread to prevent a UI that uses the firmware manager from blocking as requests are being processed.
 
 ### Supporting Other Frontends
 
