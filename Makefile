@@ -58,10 +58,10 @@ FFI_SOURCES = $(shell find gtk/ffi/src -type f -name '*.rs') \
 all: toml-gen $(GTKBINARY) $(NOTBINARY) $(LIBRARY) $(PKGCONFIG)
 
 clean:
-	cargo clean
+	rm -rf target
 
 distclean: clean
-	rm -rf .cargo vendor vendor.tar.xz target
+	rm -rf .cargo vendor vendor.tar.xz
 
 
 ## Developer tools
