@@ -28,14 +28,14 @@ fn main() {
     let event_handler = |event: FirmwareSignal| match event {
         #[cfg(feature = "fwupd")]
         FirmwareSignal::Fwupd(FwupdSignal { info, .. }) => {
-            if info.latest.as_ref().map_or(false, |latest| latest.as_ref() == info.current.as_ref())
+            if info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())
             {
                 notify();
             }
         }
         #[cfg(feature = "system76")]
         FirmwareSignal::S76System(info, ..) | FirmwareSignal::ThelioIo(info, ..) => {
-            if info.latest.as_ref().map_or(false, |latest| latest.as_ref() == info.current.as_ref())
+            if info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())
             {
                 notify();
             }
