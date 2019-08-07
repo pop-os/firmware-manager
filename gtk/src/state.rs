@@ -88,6 +88,15 @@ impl State {
         }
     }
 
+    /// The base method for creating a new firmware device entity.
+    pub fn create_device<F: FnOnce(&mut Self, Entity) -> DeviceWidget>(&mut self, func: F) {
+        let entity = self.entities.create();
+        let widget = func(self, entity);
+        self.components.device_widgets.insert(entity, widget);
+        self.widgets.stack.show();
+        self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
+    }
+
     /// An event that occurs when firmware has successfully updated.
     pub fn device_updated(&mut self, entity: Entity, latest: Box<str>) {
         if let Some(widget) = self.components.device_widgets.get(entity) {
@@ -114,39 +123,36 @@ impl State {
     /// An event that occurs when fwupd firmware is found.
     #[cfg(feature = "fwupd")]
     pub fn fwupd(&mut self, signal: FwupdSignal) {
-        let FwupdSignal { info, device, upgradeable, releases } = signal;
+        self.create_device(move |state, entity| {
+            let FwupdSignal { info, device, upgradeable, releases } = signal;
+            let widget = if device.needs_reboot() {
+                state.entities.associate_system(entity);
+                state.widgets.view_devices.system(&info)
+            } else {
+                state.widgets.view_devices.device(&info)
+            };
 
-        let entity = self.entities.create();
+            widget.stack.hide();
 
-        let widget = if device.needs_reboot() {
-            self.entities.associate_system(entity);
-            self.widgets.view_devices.system(&info)
-        } else {
-            self.widgets.view_devices.device(&info)
-        };
-
-        widget.stack.hide();
-
-        if let Some(latest) = info.latest {
-            self.components.latest.insert(entity, latest);
-            self.components.fwupd.insert(entity, (device, releases));
-            if upgradeable {
-                let sender = self.ui_sender.clone();
-                widget.stack.show();
-                widget.connect_upgrade_clicked(move || {
-                    let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
-                });
+            if let Some(latest) = info.latest {
+                state.components.latest.insert(entity, latest);
+                state.components.fwupd.insert(entity, (device, releases));
+                if upgradeable {
+                    let sender = state.ui_sender.clone();
+                    widget.stack.show();
+                    widget.connect_upgrade_clicked(move || {
+                        let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
+                    });
+                }
             }
-        }
 
-        let sender = self.ui_sender.clone();
-        widget.connect_clicked(move |_| {
-            let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
+            let sender = state.ui_sender.clone();
+            widget.connect_clicked(move |_| {
+                let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
+            });
+
+            widget
         });
-
-        self.components.device_widgets.insert(entity, widget);
-        self.widgets.stack.show();
-        self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
     }
 
     /// Reveals a widget's changelog in a revealer, and generate that changelog if it has not been
@@ -203,73 +209,70 @@ impl State {
         info: FirmwareInfo,
         downloaded: Option<(System76Digest, System76Changelog)>,
     ) {
-        let widget = self.widgets.view_devices.system(&info);
-        widget.stack.hide();
-        let entity = self.entities.create();
-        self.entities.associate_system(entity);
+        self.create_device(move |state, entity| {
+            let widget = state.widgets.view_devices.system(&info);
+            widget.stack.hide();
+            state.entities.associate_system(entity);
 
-        if let Some(latest) = info.latest {
-            if latest.as_ref() != info.current.as_ref() {
-                widget.stack.show();
-                let sender = self.ui_sender.clone();
-                widget.connect_upgrade_clicked(move || {
-                    let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
-                });
+            if let Some(latest) = info.latest {
+                if latest.as_ref() != info.current.as_ref() {
+                    widget.stack.show();
+                    let sender = state.ui_sender.clone();
+                    widget.connect_upgrade_clicked(move || {
+                        let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
+                    });
+                }
+
+                state.components.latest.insert(entity, latest);
+                if let Some(data) = downloaded {
+                    state.components.system76.insert(entity, data);
+                }
             }
 
-            self.components.latest.insert(entity, latest);
-            if let Some(data) = downloaded {
-                self.components.system76.insert(entity, data);
-            }
-        }
+            let sender = state.ui_sender.clone();
+            widget.connect_clicked(move |_| {
+                let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
+            });
 
-        let sender = self.ui_sender.clone();
-        widget.connect_clicked(move |_| {
-            let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
+            widget
         });
-
-        self.components.device_widgets.insert(entity, widget);
-        self.widgets.stack.show();
-        self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
     }
 
     /// An event that occurs when a Thelio I/O board was discovered.
     #[cfg(feature = "system76")]
     pub fn thelio_io(&mut self, info: FirmwareInfo, digest: Option<System76Digest>) {
-        let widget = self.widgets.view_devices.device(&info);
-        let entity = self.entities.create();
+        self.create_device(move |state, entity| {
+            let widget = state.widgets.view_devices.device(&info);
 
-        let sender = self.ui_sender.clone();
-        let mut upgradeable = false;
+            let sender = state.ui_sender.clone();
+            let mut upgradeable = false;
 
-        if let (Some(digest), Some(latest)) = (digest, info.latest) {
-            upgradeable = info.current.as_ref() != latest.as_ref();
-            widget.connect_upgrade_clicked(move || {
-                let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
-            });
+            if let (Some(digest), Some(latest)) = (digest, info.latest) {
+                upgradeable = info.current.as_ref() != latest.as_ref();
+                widget.connect_upgrade_clicked(move || {
+                    let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
+                });
 
-            self.components.latest.insert(entity, latest);
-            self.components.thelio.insert(entity, digest);
-        }
+                state.components.latest.insert(entity, latest);
+                state.components.thelio.insert(entity, digest);
+            }
 
-        {
-            // When the device's widget is clicked.
-            let sender = self.ui_sender.clone();
-            widget.connect_clicked(move |_| {
-                let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
-            });
-        }
+            {
+                // When the device's widget is clicked.
+                let sender = state.ui_sender.clone();
+                widget.connect_clicked(move |_| {
+                    let _ = sender.send(Event::Ui(UiEvent::Reveal(entity)));
+                });
+            }
 
-        if upgradeable {
-            widget.stack.show();
-        } else {
-            widget.stack.hide();
-        }
+            if upgradeable {
+                widget.stack.show();
+            } else {
+                widget.stack.hide();
+            }
 
-        self.components.device_widgets.insert(entity, widget);
-
-        self.widgets.stack.show();
-        self.widgets.stack.set_visible_child(self.widgets.view_devices.as_ref());
+            widget
+        });
     }
 
     /// Schedules the given firmware for an update, and show a dialog if it requires a reboot.

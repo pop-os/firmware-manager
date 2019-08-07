@@ -294,7 +294,6 @@ impl FirmwareWidget {
                         last_active_revealer = None;
                     }
                 }
-
                 // This is the last message sent before the background thread exits.
                 Stop => {
                     return glib::Continue(false);
