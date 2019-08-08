@@ -1,6 +1,5 @@
 use firmware_manager::FirmwareInfo;
 use gtk::prelude::*;
-use std::rc::Rc;
 
 #[derive(Shrinkwrap)]
 pub struct DeviceWidgetStack {
@@ -31,7 +30,7 @@ pub struct DeviceWidget {
     pub event_box: gtk::EventBox,
     pub revealer: gtk::Revealer,
     pub label: gtk::Label,
-    pub stack: Rc<DeviceWidgetStack>,
+    pub stack: DeviceWidgetStack,
 }
 
 impl DeviceWidget {
@@ -137,7 +136,7 @@ impl DeviceWidget {
             event_box,
             label,
             revealer,
-            stack: Rc::new(DeviceWidgetStack { button, stack, progress, waiting }),
+            stack: DeviceWidgetStack { button, stack, progress, waiting },
         }
     }
 
