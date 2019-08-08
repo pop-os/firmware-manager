@@ -14,17 +14,11 @@ Build-Depends:
 Standards-Version: 4.1.4
 Homepage: https://github.com/pop-os/firmware-manager
 
-Package: firmware-manager-shared
-Architecture: all
-Description: Firmware Manager init service
- Ensures that the fwupd service has been activated
-
 Package: firmware-manager
 Architecture: amd64
 Depends:
   dbus,
   firmware-manager-notify,
-  firmware-manager-shared,
   libgtk-3-0,
   ${misc:Depends},
   ${shlib:Depends}
@@ -46,7 +40,6 @@ Architecture: amd64
 Depends:
   dbus,
   firmware-manager-notify,
-  firmware-manager-shared,
   libgtk-3-0,
   ${misc:Depends},
   ${shlib:Depends}

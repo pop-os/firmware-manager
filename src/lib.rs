@@ -5,7 +5,7 @@ extern crate err_derive;
 extern crate shrinkwraprs;
 
 #[cfg(feature = "fwupd")]
-pub use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
+pub use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Error as FwupdError, Release as FwupdRelease};
 
 #[cfg(feature = "system76")]
 pub use system76_firmware_daemon::{
@@ -168,8 +168,18 @@ pub enum FirmwareSignal {
 pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, sender: F) {
     #[cfg(feature = "system76")]
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
+
     #[cfg(feature = "fwupd")]
-    let fwupd = get_client("fwupd", fwupd_is_active, FwupdClient::new);
+    let fwupd = get_client::<_, _, fwupd_dbus::Error>(
+        "fwupd",
+        || true,
+        || {
+            let client = FwupdClient::new()?;
+            client.ping()?;
+            Ok(client)
+        },
+    );
+
     #[cfg(feature = "fwupd")]
     let http_client = &reqwest::Client::new();
 
@@ -414,10 +424,6 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
         sender(event);
     }
 }
-
-/// Check if the fwupd service is active.
-#[cfg(feature = "fwupd")]
-pub fn fwupd_is_active() -> bool { systemd_service_is_active("fwupd") }
 
 /// Check if the system76-firmware-daemon service is active.
 #[cfg(feature = "system76")]

@@ -746,7 +746,7 @@ dependencies = [
 [[package]]
 name = "fwupd-dbus"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/fwupd-dbus#0bf8da2a57002b4220c5c3abf1c0e83952f2bcc3"
+source = "git+https://github.com/pop-os/fwupd-dbus#c8f9e4aa08510e1c6f18c9aea94a32e017d1edeb"
 dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cascade 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",

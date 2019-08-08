@@ -1,5 +1,5 @@
 #[cfg(feature = "fwupd")]
-use firmware_manager::FwupdSignal;
+use firmware_manager::{FwupdError, FwupdSignal};
 use firmware_manager::{get_client, FirmwareSignal};
 use notify_rust::{Notification, Timeout};
 use std::{
@@ -12,7 +12,7 @@ const UPDATES_FOUND: i32 = 3;
 const GNOME_CONTROL_CENTER: &str = "/usr/share/applications/gnome-firmware-panel.desktop";
 
 #[cfg(feature = "fwupd")]
-use firmware_manager::{fwupd_is_active, fwupd_scan, fwupd_updates, FwupdClient};
+use firmware_manager::{fwupd_scan, fwupd_updates, FwupdClient};
 
 #[cfg(feature = "system76")]
 use firmware_manager::{s76_firmware_is_active, s76_scan, System76Client};
@@ -20,8 +20,18 @@ use firmware_manager::{s76_firmware_is_active, s76_scan, System76Client};
 fn main() {
     #[cfg(feature = "system76")]
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
+
     #[cfg(feature = "fwupd")]
-    let fwupd = get_client("fwupd", fwupd_is_active, FwupdClient::new);
+    let fwupd = get_client::<_, _, FwupdError>(
+        "fwupd",
+        || true,
+        || {
+            let client = FwupdClient::new()?;
+            client.ping()?;
+            Ok(client)
+        },
+    );
+
     #[cfg(feature = "fwupd")]
     let http_client = &reqwest::Client::new();
 

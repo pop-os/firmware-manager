@@ -1,7 +1,0 @@
-#!/bin/sh
-set -x
-systemctl start fwupd.service
-
-#DEBHELPER#
-
-exit 0
