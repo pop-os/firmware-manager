@@ -1,12 +1,20 @@
 # Firmware Manager
 
-One of the remaining issues with firmware management on Linux is the lack of options for graphical frontends to firmware management services like `fwupd` and `system76-firmware`. For `fwupd`, the only solutions available were to distribute either GNOME Software, or KDE Discover; which is not viable for Linux distributions which have their own application centers, or frontends to package managers. For `system76-firmware`, an official GTK application exists, but it only supports updating System76 firmware, when it would be more ideal if it could support both.
+One of the remaining issues with firmware management on Linux is the lack of options for graphical frontends to firmware management services like `fwupd` and `system76-firmware`. For `fwupd`, the only solutions available were to distribute either GNOME Software, or KDE Discover; which is not viable for Linux distributions which have their own application centers, or frontends to package managers. For `system76-firmware`, an official GTK application exists, but it only supports updating System76 firmware, when it would be more ideal if it could support updating firmware from both services.
 
 > `fwupd` is a system service which connects to [LVFS](https://fwupd.org/) to check for firmware updates to a wide variety of hardware from multiple vendors. `system76-firmware` is our own system service which connects to System76 to check for firmware updates for System76 hardware.
+>
+> **Privacy**
+>
+> To increase privacy, we have disabled telemetry reporting in fwupd on Pop!_OS.
 
-To solve this problem, we've been working on the [Firmware Manager](https://github.com/pop-os/firmware-manager) project, which we will be shipping in both Pop!_OS and Ubuntu. It supports both `fwupd` and `system76-firmware`, is Wayland-compatible, and provides both a GTK application and GTK library. In Pop!_OS, it will be integrated into GNOME Settings in a new **Firmware** panel under the **Devices** category using the GTK library. For Ubuntu, the GTK application will be provided, rather than integrated into GNOME Settings.
+To solve this problem, we've been working on the [Firmware Manager](https://github.com/pop-os/firmware-manager) project, which we will be shipping to all Pop!_OS users, and System76 hardware customers on any other distribution. It supports checking and updating firmware from the `fwupd` and `system76-firmware` services, is Wayland-compatible, and provides both a GTK application and library.
 
 > Wayland disallows applications from being run as root, so applications must either call `pkexec` to prompt the user for permission to run a background process that is root, or connect to an existing background service provided the needed capabilities.
+
+In Pop!_OS, the firmware manager will be integrated into GNOME Settings in a new **Firmware** panel under the **Devices** category with the GTK widget library. For other Linux distributions, and for those who do not use GNOME, the GTK application is available to provide the firmware manager widget as a standalone application in its own application window.
+
+Although we've created a GTK application and widget library for our use in Pop!_OS, the core framework is agnostic to any UI toolkit, thereby enabling firmware manager frontends to be written in any toolkit. However, it should be noted that since the framework is written in Rust, frontends would need to use Rust in order to interact with it.
 
 ## GTK Application
 
@@ -144,4 +152,4 @@ GtkWidget *firmware_widget =
 s76_firmware_widget_destroy (firmware);
 ```
 
-The C implementation of the Rust application is [here](./ffi/examples/c), demonstrated with the Meson build system.
+The C implementation of the Rust application is [here](./gtk/ffi/examples/c), demonstrated with the Meson build system.
