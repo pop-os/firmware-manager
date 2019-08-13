@@ -2,19 +2,22 @@
 
 One of the remaining issues with firmware management on Linux is the lack of options for graphical frontends to firmware management services like `fwupd` and `system76-firmware`. For `fwupd`, the only solutions available were to distribute either GNOME Software, or KDE Discover; which is not viable for Linux distributions which have their own application centers, or frontends to package managers. For `system76-firmware`, an official GTK application exists, but it only supports updating System76 firmware, when it would be more ideal if it could support updating firmware from both services.
 
-> `fwupd` is a system service which connects to [LVFS](https://fwupd.org/) to check for firmware updates to a wide variety of hardware from multiple vendors. `system76-firmware` is our own system service which connects to System76 to check for firmware updates for System76 hardware.
+> `fwupd` is a system service which connects to [LVFS] to check for firmware updates to a wide variety of hardware from multiple vendors. `system76-firmware` is our own system service which connects to System76 to check for firmware updates for System76 hardware.
 >
 > **Privacy**
 >
 > To increase privacy, we have disabled telemetry reporting in fwupd on Pop!_OS.
 
-To solve this problem, we've been working on the [Firmware Manager](https://github.com/pop-os/firmware-manager) project, which we will be shipping to all Pop!_OS users, and System76 hardware customers on any other distribution. It supports checking and updating firmware from the `fwupd` and `system76-firmware` services, is Wayland-compatible, and provides both a GTK application and library.
+To solve this problem, we've been working on the [Firmware Manager] project, which we will be shipping to all Pop!_OS users, and System76 hardware customers on any other distribution. It supports checking and updating firmware from the `fwupd` and `system76-firmware` services, is Wayland-compatible, and provides both a GTK application and library.
 
 > Wayland disallows applications from being run as root, so applications must either call `pkexec` to prompt the user for permission to run a background process that is root, or connect to an existing background service provided the needed capabilities.
 
 In Pop!_OS, the firmware manager will be integrated into GNOME Settings in a new **Firmware** panel under the **Devices** category with the GTK widget library. For other Linux distributions, and for those who do not use GNOME, the GTK application is available to provide the firmware manager widget as a standalone application in its own application window.
 
-Although we've created a GTK application and widget library for our use in Pop!_OS, the core framework is agnostic to any UI toolkit, thereby enabling firmware manager frontends to be written in any toolkit. However, it should be noted that since the framework is written in Rust, frontends would need to use Rust in order to interact with it.
+Although we've created a GTK application and widget library for our use in Pop!_OS, the core framework is toolkit-agnostic, thereby enabling firmware manager frontends to be written in any toolkit. However, it should be noted that since the framework is written in Rust, frontends would need to use Rust in order to interact with it.
+
+[firmware manager]: https://github.com/pop-os/firmware-manager
+[lvfs]: https://fwupd.org/
 
 ## GTK Application
 
@@ -31,7 +34,9 @@ Pop!_OS will be integrating a patch into GNOME Settings which embeds the GTK wid
 
 ## Implementation Details
 
-Like all of our projects today, it is written in Rust, and adheres to current best practices. The project is configured as a workspace, with the core crate providing a generic library for discovering and managing firmware from multiple firmware services. Both `fwupd` and `system76-firmware` are supported. The core is used as the foundation for the two members of this workspace: a notification binary to provide desktop notifications about firmware updates; and a GTK project which serves as both a widget library and desktop application.
+Like all of our projects today, it is written in Rust, and adheres to current best practices. The project is configured as a workspace, with the core crate providing a generic library for discovering and managing firmware from multiple firmware services. Both `fwupd` and `system76-firmware` are supported.
+
+The core is used as the foundation for the two members of this workspace: a notification binary to provide desktop notifications about firmware updates; and a GTK project which serves as both a widget library and desktop application.
 
 **Visualization of project structure**
 
@@ -42,17 +47,29 @@ Like all of our projects today, it is written in Rust, and adheres to current be
         * firmware-manager-gtk-ffi
 ```
 
-The `firmware-manager` library provides functions for scanning firmware, and an event loop which receives and sends signals through channels. This is designed to be run in a background thread to prevent a UI that uses the firmware manager from blocking as requests are being processed. Additionally, the event API is expected to be used with the provided `slotmap`-based entity-component architecture. This allows a frontend to assign entity IDs to their requests, and receive those entity IDs back in responses. In doing so, frontends can avoid the need for complex runtime reference-counnting, or creating reference cycles.
+### Core Library
 
-The `firmware-manager-gtk` member of the project provides the firmware widget as a library, and an application which places that widget into a window. This member contains a C FFI sub-member, which builds a dynamic library with a C API and header, and can be used to integrate the widget into any GTK application written in C. The included GTK application statically-links the Rust widget library. This implementation takes full advantage of the slotmap EC, assigning its own component storages to keep track of state relative to a device entity, such as the widgets assigned to an entity, and information about their firmware.
+The `firmware-manager` library provides functions for scanning firmware, and an event loop which receives and sends event signals through channels. One channel receives messages from the frontend, whereas the other sends messages to the frontend. This is designed to be run in a background thread in order to prevent a UI that uses the firmware manager from blocking as requests are being processed.
+
+Additionally, the event API is expected to be used with the provided `slotmap`-based entity-component architecture. This allows a frontend to assign entity IDs to their requests, and receive those entity IDs back in responses. In doing so, frontends can avoid the need for complex runtime reference-counnting, or creating reference cycles. The frontend has exclusive ownership of the data that an entity ID refers to.
+
+### GTK Application / Library
+
+The `firmware-manager-gtk` member of the project provides the firmware widget as a library, and an application which places that widget into a window. This member contains a C FFI sub-member, which builds a dynamic library with a C API and header, and can be used to integrate the widget into any GTK application written in C.
+
+This implementation takes full advantage of the slotmap EC, assigning its own component storages to keep track of state relative to a device entity, such as the widgets assigned to an entity, and information about their firmware.
+
+> The included GTK application statically-links the Rust widget library into the binary.
+
+### Notification Binary
 
 The `firmware-manager-notify` member comes with a systemd user timer so that it is executed at login, and then periodically run again at set intervals to check for updates again. When updates are found, a clickable notification will be displayed, which will either open the Firmware panel in GNOME Settings, or the standalone desktop application, depending on which is available on the system.
 
-### Supporting Other Frontends
+## Supporting Other Frontends
 
 Although the project will release with only a GTK frontend, it is possible for anyone to use it as the foundations for developing a frontend written in any other graphical toolkit. All functionality in the core library is GUI-agnostic, and the entity-component architecture can be extended to their specialized needs. If you write a frontend for another toolkit and want it included in the project, feel free to submit a pull request!
 
-### How to Implement Frontend Support
+## How to Implement Frontend Support
 
 Frontends are expected to store information about devices in the included entity-component architecture in the `firmware-manager`. Events sent to firmware manager's event loop requires the entity IDs to be sent along with messages. This makes it easier to keep cyclic references out of widget signals, and to identify which firmware a response is referring to. Widgets belonging to a specific firmware device need only send a message through their sender with their attached entity ID.
 
