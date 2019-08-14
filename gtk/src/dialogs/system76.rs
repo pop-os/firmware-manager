@@ -22,8 +22,6 @@ impl<'a> System76Dialog<'a> {
 
         let dialog = FirmwareUpdateDialog::new(self.latest, log_entries, self.has_battery);
 
-        dialog.destroy();
-
         if gtk::ResponseType::Accept == dialog.run() {
             // Exchange the button for a progress bar.
             self.widgets.stack.switch_to_waiting();
@@ -31,5 +29,7 @@ impl<'a> System76Dialog<'a> {
             let event = FirmwareEvent::S76System(self.entity, self.digest.clone());
             let _ = self.sender.send(event);
         }
+
+        dialog.destroy();
     }
 }
