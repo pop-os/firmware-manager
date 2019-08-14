@@ -2,10 +2,7 @@ use super::FirmwareUpdateDialog;
 use crate::widgets::DeviceWidget;
 use firmware_manager::{Entity, FirmwareEvent, FwupdDevice, FwupdRelease};
 use gtk::prelude::*;
-use std::{
-    collections::BTreeSet,
-    sync::{mpsc::Sender, Arc},
-};
+use std::sync::{mpsc::Sender, Arc};
 
 pub struct FwupdDialog<'a> {
     pub device:       &'a FwupdDevice,
@@ -13,7 +10,7 @@ pub struct FwupdDialog<'a> {
     pub has_battery:  bool,
     pub latest:       &'a str,
     pub needs_reboot: bool,
-    pub releases:     &'a BTreeSet<FwupdRelease>,
+    pub releases:     &'a [FwupdRelease],
     pub sender:       &'a Sender<FirmwareEvent>,
     pub widgets:      &'a DeviceWidget,
 }

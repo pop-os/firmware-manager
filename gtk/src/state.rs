@@ -3,7 +3,7 @@ use firmware_manager::*;
 
 use gtk::prelude::*;
 use slotmap::{DefaultKey as Entity, SecondaryMap, SparseSecondaryMap};
-use std::{collections::BTreeSet, sync::mpsc::Sender};
+use std::sync::mpsc::Sender;
 
 /// Manages all state and state interactions with the UI.
 pub(crate) struct State {
@@ -51,7 +51,7 @@ pub(crate) struct Components {
 
     /// Details about a fwupd device
     #[cfg(feature = "fwupd")]
-    pub(crate) fwupd: SparseSecondaryMap<Entity, (FwupdDevice, BTreeSet<FwupdRelease>)>,
+    pub(crate) fwupd: SparseSecondaryMap<Entity, (FwupdDevice, Vec<FwupdRelease>)>,
 
     /// Details about system76 system firmware.
     #[cfg(feature = "system76")]

@@ -4,8 +4,12 @@ extern crate err_derive;
 #[macro_use]
 extern crate shrinkwraprs;
 
+mod version_sorting;
+
 #[cfg(feature = "fwupd")]
-pub use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Error as FwupdError, Release as FwupdRelease};
+pub use fwupd_dbus::{
+    Client as FwupdClient, Device as FwupdDevice, Error as FwupdError, Release as FwupdRelease,
+};
 
 #[cfg(feature = "system76")]
 pub use system76_firmware_daemon::{
@@ -18,9 +22,9 @@ pub use system76_firmware_daemon::Client as System76Client;
 
 pub use slotmap::DefaultKey as Entity;
 
+use self::version_sorting::sort_versions_reverse;
 use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
-    collections::BTreeSet,
     error::Error as _,
     process::Command,
     sync::{mpsc::Receiver, Arc},
@@ -117,7 +121,7 @@ pub struct FwupdSignal {
     pub info:        FirmwareInfo,
     pub device:      FwupdDevice,
     pub upgradeable: bool,
-    pub releases:    BTreeSet<FwupdRelease>,
+    pub releases:    Vec<FwupdRelease>,
 }
 
 #[derive(Debug)]
@@ -284,7 +288,8 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 
     for device in devices {
         if device.is_supported() {
-            if let Ok(releases) = fwupd.releases(&device) {
+            if let Ok(mut releases) = fwupd.releases(&device) {
+                sort_versions_reverse(&mut releases);
                 let upgradeable =
                     releases.iter().rev().next().map_or(false, |v| v.version != device.version);
 
