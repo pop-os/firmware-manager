@@ -22,6 +22,7 @@ Depends:
   libgtk-3-0,
   ${misc:Depends},
   ${shlib:Depends}
+Provides: firmware-manager-virtual
 Description: Firmware Manager application
  GTK application for managing system and device firmware.
 
