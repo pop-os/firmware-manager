@@ -22,7 +22,7 @@ pub use system76_firmware_daemon::Client as System76Client;
 
 pub use slotmap::DefaultKey as Entity;
 
-use self::version_sorting::sort_versions_reverse;
+use self::version_sorting::sort_versions;
 use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
     error::Error as _,
@@ -289,11 +289,10 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     for device in devices {
         if device.is_supported() {
             if let Ok(mut releases) = fwupd.releases(&device) {
-                sort_versions_reverse(&mut releases);
-                let upgradeable =
-                    releases.iter().rev().next().map_or(false, |v| v.version != device.version);
+                sort_versions(&mut releases);
 
                 let latest = releases.iter().last().expect("no releases");
+                let upgradeable = latest.version != device.version;
 
                 sender(FirmwareSignal::Fwupd(FwupdSignal {
                     info: FirmwareInfo {

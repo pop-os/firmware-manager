@@ -3,11 +3,12 @@ pub trait Versioned {
 }
 
 // Sort from oldest to latest.
-// pub fn sort_versions<V: Versioned>(input: &mut [V]) {
-//    input.sort_by(|a, b| human_sort::compare(a.version(), b.version()));
-//}
+pub fn sort_versions<V: Versioned>(input: &mut [V]) {
+   input.sort_by(|a, b| human_sort::compare(a.version(), b.version()));
+}
 
 /// Sort from latest to oldest.
+#[cfg(test)] // Only used in tests
 pub fn sort_versions_reverse<V: Versioned>(input: &mut [V]) {
     input.sort_by(|a, b| human_sort::compare(b.version(), a.version()));
 }
