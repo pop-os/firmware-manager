@@ -25,6 +25,7 @@ pub use slotmap::DefaultKey as Entity;
 use self::version_sorting::sort_versions;
 use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
+    io,
     error::Error as _,
     process::Command,
     sync::{mpsc::Receiver, Arc},
@@ -203,8 +204,14 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 #[cfg(feature = "fwupd")]
                 {
                     if let Some(ref client) = fwupd {
-                        if let Err(why) = fwupd_updates(client, http_client) {
-                            eprintln!("failed to update fwupd remotes: {}", why);
+                        // TODO: fwupd gives an error about an invalid signature. Use this once we figure out why
+                        //       this keeps happening with our client.
+                        // if let Err(why) = fwupd_updates(client, http_client) {
+                        //     eprintln!("failed to update fwupd remotes: {}", why);
+                        // }
+
+                        if let Err(why) = fwupdmgr_refresh() {
+                            eprintln!("failed to refresh remotes: {}", why);
                         }
 
                         fwupd_scan(client, sender);
@@ -308,6 +315,11 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
             }
         }
     }
+}
+
+#[cfg(feature = "fwupd")]
+pub fn fwupdmgr_refresh() -> io::Result<()> {
+    Command::new("fwupdmgr").arg("refresh").status().map(|_| ())
 }
 
 /// Update the fwupd remotes
