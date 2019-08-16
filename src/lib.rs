@@ -279,6 +279,20 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
     }
 }
 
+fn read_dmi(path: &str) -> io::Result<String> {
+    let mut vendor = std::fs::read_to_string(path)?;
+    vendor.truncate(vendor.trim_end().len());
+    Ok(vendor)
+}
+
+fn board_name() -> io::Result<String> { read_dmi("/sys/class/dmi/id/board_name") }
+
+fn board_vendor() -> io::Result<String> { read_dmi("/sys/class/dmi/id/board_vendor") }
+
+pub(crate) fn system_board_identity() -> io::Result<String> {
+    Ok([&*board_vendor()?, " ", &*board_name()?].concat())
+}
+
 /// Generic function for attaining a DBus client connection to a firmware service.
 pub fn get_client<F, T, E>(name: &str, is_active: fn() -> bool, connect: F) -> Option<T>
 where

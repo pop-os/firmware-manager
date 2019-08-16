@@ -25,8 +25,11 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                 }
             };
 
+            let name: Box<str> =
+                crate::system_board_identity().map(Box::from).unwrap_or(current.model);
+
             let fw = FirmwareInfo {
-                name: current.model,
+                name,
                 current: current.version,
                 latest: info.as_ref().map(|(_, changelog)| {
                     changelog.versions.iter().next().expect("empty changelog").bios.clone()
