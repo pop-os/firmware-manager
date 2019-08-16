@@ -9,40 +9,34 @@ use system76_firmware_daemon::{
 /// Scan for available System76 firmware
 pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     // Thelio system firmware check.
-    let event = match client.bios() {
-        Ok(current) => {
-            let info = match client.download() {
-                Ok(S76SystemInfo { digest, changelog }) => Some((digest, changelog)),
-                Err(why) => {
-                    let mut error_message = format!("{}", why);
-                    let mut cause = why.source();
-                    while let Some(error) = cause {
-                        error_message.push_str(format!(": {}", error).as_str());
-                        cause = error.source();
-                    }
-                    eprintln!("failed to download system76 changelog: {}", error_message);
-                    None
+    if let Ok(current) = client.bios() {
+        let info = match client.download() {
+            Ok(S76SystemInfo { digest, changelog }) => Some((digest, changelog)),
+            Err(why) => {
+                let mut error_message = format!("{}", why);
+                let mut cause = why.source();
+                while let Some(error) = cause {
+                    error_message.push_str(format!(": {}", error).as_str());
+                    cause = error.source();
                 }
-            };
+                eprintln!("failed to download system76 changelog: {}", error_message);
+                None
+            }
+        };
 
-            let name: Box<str> =
-                crate::system_board_identity().map(Box::from).unwrap_or(current.model);
+        let name: Box<str> = crate::system_board_identity().map(Box::from).unwrap_or(current.model);
 
-            let fw = FirmwareInfo {
-                name,
-                current: current.version,
-                latest: info.as_ref().map(|(_, changelog)| {
-                    changelog.versions.iter().next().expect("empty changelog").bios.clone()
-                }),
-                install_duration: 1,
-            };
+        let fw = FirmwareInfo {
+            name,
+            current: current.version,
+            latest: info.as_ref().map(|(_, changelog)| {
+                changelog.versions.iter().next().expect("empty changelog").bios.clone()
+            }),
+            install_duration: 1,
+        };
 
-            FirmwareSignal::S76System(fw, info)
-        }
-        Err(why) => FirmwareSignal::Error(None, why.into()),
-    };
-
-    sender(event);
+        sender(FirmwareSignal::S76System(fw, info));
+    }
 
     // Thelio I/O system firmware check.
     let event = match client.thelio_io_list() {
