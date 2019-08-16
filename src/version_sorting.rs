@@ -1,10 +1,12 @@
+//! Simple version-sorting trait and function.
+
 pub trait Versioned {
     fn version(&self) -> &str;
 }
 
 // Sort from oldest to latest.
 pub fn sort_versions<V: Versioned>(input: &mut [V]) {
-   input.sort_by(|a, b| human_sort::compare(a.version(), b.version()));
+    input.sort_by(|a, b| human_sort::compare(a.version(), b.version()));
 }
 
 /// Sort from latest to oldest.

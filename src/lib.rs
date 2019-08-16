@@ -7,6 +7,11 @@ extern crate shrinkwraprs;
 mod version_sorting;
 
 #[cfg(feature = "fwupd")]
+mod fwupd;
+#[cfg(feature = "system76")]
+mod system76;
+
+#[cfg(feature = "fwupd")]
 pub use fwupd_dbus::{
     Client as FwupdClient, Device as FwupdDevice, Error as FwupdError, Release as FwupdRelease,
 };
@@ -17,6 +22,11 @@ pub use system76_firmware_daemon::{
     SystemInfo as S76SystemInfo, ThelioIoInfo,
 };
 
+#[cfg(feature = "fwupd")]
+pub use self::fwupd::*;
+#[cfg(feature = "system76")]
+pub use self::system76::*;
+
 #[cfg(feature = "system76")]
 pub use system76_firmware_daemon::Client as System76Client;
 
@@ -26,7 +36,6 @@ use self::version_sorting::sort_versions;
 use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
     io,
-    error::Error as _,
     process::Command,
     sync::{mpsc::Receiver, Arc},
 };
@@ -115,16 +124,6 @@ impl Entities {
     pub fn is_system(&self, entity: Entity) -> bool { self.system.contains_key(entity) }
 }
 
-/// A signal sent when a fwupd-compatible device has been discovered.
-#[cfg(feature = "fwupd")]
-#[derive(Debug)]
-pub struct FwupdSignal {
-    pub info:        FirmwareInfo,
-    pub device:      FwupdDevice,
-    pub upgradeable: bool,
-    pub releases:    Vec<FwupdRelease>,
-}
-
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum FirmwareSignal {
@@ -204,9 +203,10 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 #[cfg(feature = "fwupd")]
                 {
                     if let Some(ref client) = fwupd {
-                        // TODO: fwupd gives an error about an invalid signature. Use this once we figure out why
-                        //       this keeps happening with our client.
-                        // if let Err(why) = fwupd_updates(client, http_client) {
+                        // TODO: fwupd gives an error about an invalid signature. Use this once we
+                        // figure out why       this keeps happening with
+                        // our client. if let Err(why) =
+                        // fwupd_updates(client, http_client) {
                         //     eprintln!("failed to update fwupd remotes: {}", why);
                         // }
 
@@ -278,172 +278,6 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
         }
     }
 }
-
-/// Scan for supported devices from the fwupd DBus daemon.
-#[cfg(feature = "fwupd")]
-pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
-    eprintln!("scanning fwupd devices");
-
-    let devices = match fwupd.devices() {
-        Ok(devices) => devices,
-        Err(why) => {
-            eprintln!("errored");
-            sender(FirmwareSignal::Error(None, why.into()));
-            return;
-        }
-    };
-
-    for device in devices {
-        if device.is_supported() {
-            if let Ok(mut releases) = fwupd.releases(&device) {
-                sort_versions(&mut releases);
-
-                let latest = releases.iter().last().expect("no releases");
-                let upgradeable = latest.version != device.version;
-
-                sender(FirmwareSignal::Fwupd(FwupdSignal {
-                    info: FirmwareInfo {
-                        name:             [&device.vendor, " ", &device.name].concat().into(),
-                        current:          device.version.clone(),
-                        latest:           Some(latest.version.clone()),
-                        install_duration: latest.install_duration,
-                    },
-                    device,
-                    upgradeable,
-                    releases,
-                }));
-            }
-        }
-    }
-}
-
-#[cfg(feature = "fwupd")]
-pub fn fwupdmgr_refresh() -> io::Result<()> {
-    Command::new("fwupdmgr").arg("refresh").status().map(|_| ())
-}
-
-/// Update the fwupd remotes
-#[cfg(feature = "fwupd")]
-pub fn fwupd_updates(
-    client: &FwupdClient,
-    http: &reqwest::Client,
-) -> Result<(), fwupd_dbus::Error> {
-    use std::time::Duration;
-
-    const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
-
-    // NOTE: This attribute is required due to a clippy bug.
-    #[allow(clippy::identity_conversion)]
-    for remote in client.remotes()? {
-        if !remote.enabled {
-            continue;
-        }
-
-        if let fwupd_dbus::RemoteKind::Download = remote.kind {
-            let update = remote
-                .time_since_last_update()
-                .map_or(true, |since| since > Duration::from_secs(14 * SECONDS_IN_DAY));
-
-            if update {
-                eprintln!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
-                if let Err(why) = remote.update_metadata(client, http) {
-                    let mut error_message = format!("{}", why);
-                    let mut cause = why.source();
-                    while let Some(error) = cause {
-                        error_message.push_str(format!(": {}", error).as_str());
-                        cause = error.source();
-                    }
-                    eprintln!(
-                        "failed to fetch updates from {}: {:?}",
-                        remote.filename_cache, error_message
-                    );
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Scan for available System76 firmware
-#[cfg(feature = "system76")]
-pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
-    // Thelio system firmware check.
-    let event = match client.bios() {
-        Ok(current) => {
-            let info = match client.download() {
-                Ok(S76SystemInfo { digest, changelog }) => Some((digest, changelog)),
-                Err(why) => {
-                    let mut error_message = format!("{}", why);
-                    let mut cause = why.source();
-                    while let Some(error) = cause {
-                        error_message.push_str(format!(": {}", error).as_str());
-                        cause = error.source();
-                    }
-                    eprintln!("failed to download system76 changelog: {}", error_message);
-                    None
-                }
-            };
-
-            let fw = FirmwareInfo {
-                name:             current.model,
-                current:          current.version,
-                latest:           info.as_ref().map(|(_, changelog)| {
-                    changelog.versions.iter().next().expect("empty changelog").bios.clone()
-                }),
-                install_duration: 1,
-            };
-
-            FirmwareSignal::S76System(fw, info)
-        }
-        Err(why) => FirmwareSignal::Error(None, why.into()),
-    };
-
-    sender(event);
-
-    // Thelio I/O system firmware check.
-    let event = match client.thelio_io_list() {
-        Ok(list) => {
-            if list.is_empty() {
-                None
-            } else {
-                let lowest_revision = lowest_revision(list.iter().map(|(_, rev)| rev.as_ref()));
-
-                let current =
-                    Box::from(if lowest_revision.is_empty() { "N/A" } else { lowest_revision });
-
-                let (latest, digest) = match client.thelio_io_download() {
-                    Ok(info) => {
-                        let ThelioIoInfo { digest, revision } = info;
-                        (Some(revision), Some(digest))
-                    }
-                    Err(why) => {
-                        eprintln!("failed to download Thelio I/O digest: {:?}", why);
-                        (None, None)
-                    }
-                };
-
-                let fw = FirmwareInfo {
-                    name: "Thelio I/O".into(),
-                    current,
-                    latest,
-                    install_duration: 15,
-                };
-
-                Some(FirmwareSignal::ThelioIo(fw, digest))
-            }
-        }
-        Err(why) => Some(FirmwareSignal::Error(None, why.into())),
-    };
-
-    if let Some(event) = event {
-        sender(event);
-    }
-}
-
-/// Check if the system76-firmware-daemon service is active.
-#[cfg(feature = "system76")]
-pub fn s76_firmware_is_active() -> bool { systemd_service_is_active("system76-firmware-daemon") }
 
 /// Generic function for attaining a DBus client connection to a firmware service.
 pub fn get_client<F, T, E>(name: &str, is_active: fn() -> bool, connect: F) -> Option<T>
