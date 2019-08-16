@@ -18,7 +18,7 @@ Package: firmware-manager
 Architecture: amd64
 Depends:
   dbus,
-  firmware-manager-notify,
+  firmware-manager-shared,
   libgtk-3-0,
   ${misc:Depends},
   ${shlib:Depends}
@@ -30,17 +30,25 @@ Package: firmware-manager-notify
 Architecture: amd64
 Depends:
   dbus,
-  firmware-manager-shared,
   ${misc:Depends},
   ${shlib:Depends}
 Description: Firmware Manager application
  GTK application for managing system and device firmware.
 
+Package: firmware-manager-shared
+Architecture: all
+Depends:
+  firmware-manager-notify,
+  ${misc:Depends},
+  ${shlib:Depends}
+Description: Files and dependencies shared between firmware-manager and libfirmware-manager installs
+ Files shared between firmware-manager and libfirmware-manager installs
+
 Package: libfirmware-manager
 Architecture: amd64
 Depends:
   dbus,
-  firmware-manager-notify,
+  firmware-manager-shared,
   libgtk-3-0,
   ${misc:Depends},
   ${shlib:Depends}

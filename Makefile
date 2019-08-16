@@ -2,6 +2,7 @@ prefix ?= /usr/local
 bindir = $(prefix)/bin
 includedir = $(prefix)/include
 libdir = $(prefix)/lib
+sharedir = $(prefix)/share
 
 export CARGO_C_PREFIX = $(prefix)
 export CARGO_C_LIBDIR = $(libdir)
@@ -150,7 +151,7 @@ $(PKGCONFIG): tools/src/pkgconfig.rs
 
 ## Install commands
 
-install: install-bin install-ffi install-notify
+install: install-bin install-ffi install-notify install-icons
 
 install-bin:
 	install -Dm0755 "$(GTKBINARY)"  "$(DESTDIR)$(bindir)/$(APPID)"
@@ -166,6 +167,13 @@ install-notify:
 	install -Dm0644 "$(STARTUP_DESKTOP)"  "$(DESTDIR)/etc/xdg/autostart/$(NOTIFY_APPID).desktop"
 	install -Dm0644 "target/$(NOTIFY_SERVICE)" "$(DESTDIR)$(libdir)/systemd/user/$(NOTIFY_SERVICE)"
 	install -Dm0644 "target/$(NOTIFY_TIMER)" "$(DESTDIR)$(libdir)/systemd/user/$(NOTIFY_TIMER)"
+
+install-icons:
+	for icon in $(shell find assets/icons -name *.png -or -name *.svg); do \
+	    dest=$(DESTDIR)$(sharedir)/icons/hicolor/$$(echo "$$icon" | cut -c 13-); \
+	    mkdir -p $$(dirname $$dest); \
+		cp -v $$icon $$dest; \
+	done
 
 ## Uninstall Commands
 
