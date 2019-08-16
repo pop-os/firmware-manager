@@ -217,6 +217,8 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                         fwupd_scan(client, sender);
                     }
                 }
+
+                let _ = sender(FirmwareSignal::ScanningComplete);
             }
             #[cfg(feature = "fwupd")]
             FirmwareEvent::Fwupd(entity, device, release) => {
