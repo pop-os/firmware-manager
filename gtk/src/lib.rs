@@ -254,6 +254,7 @@ impl FirmwareWidget {
                     eprintln!("scanning for firmware is complete");
                     if state.entities.entities.is_empty() {
                         state.widgets.stack.show();
+                        state.widgets.view_empty.show_all();
                         state.widgets.stack.set_visible_child(state.widgets.view_empty.as_ref());
                     }
                 }
