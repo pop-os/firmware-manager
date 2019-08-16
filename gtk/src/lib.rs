@@ -251,6 +251,7 @@ impl FirmwareWidget {
                 }
                 // Signal is received when scanning has completed.
                 Firmware(ScanningComplete) => {
+                    eprintln!("scanning for firmware is complete");
                     if state.entities.entities.is_empty() {
                         state.widgets.stack.show();
                         state.widgets.stack.set_visible_child(state.widgets.view_empty.as_ref());

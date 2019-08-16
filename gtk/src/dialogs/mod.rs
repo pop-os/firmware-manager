@@ -26,9 +26,18 @@ impl FirmwareUpdateDialog {
         let header = ["Firmware version ", version, " is available."].concat();
 
         let changelog_container = cascade! {
-            gtk::Box::new(gtk::Orientation::Vertical, 12);
+            content: gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_vexpand(true);
             ..add(&gtk::LabelBuilder::new().label(&*header).xalign(0.0).build());
+            | if has_battery {
+                content.add(
+                    &gtk::LabelBuilder::new()
+                        .label("<b>Plug into power</b> before you begin.")
+                        .use_markup(true)
+                        .xalign(0.0)
+                        .build()
+                );
+            };
             ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
             ..add(&changelog_entries);
             ..show_all();
@@ -48,8 +57,8 @@ impl FirmwareUpdateDialog {
             .use_header_bar(1)
             .deletable(true)
             .destroy_with_parent(true)
-            .width_request(400)
-            .height_request(300)
+            .width_request(600)
+            .height_request(500)
             .build();
 
         let headerbar = dialog
@@ -84,23 +93,11 @@ impl FirmwareUpdateDialog {
                     .build()
             );
             ..add(&cascade! {
-                content: gtk::Box::new(gtk::Orientation::Vertical, 6);
-                ..add(&cascade! {
-                    gtk::ScrolledWindowBuilder::new()
-                        .hexpand(true)
-                        .vexpand(true)
-                        .build();
-                    ..add(&changelog_container);
-                });
-                | if has_battery {
-                    content.add(
-                        &gtk::LabelBuilder::new()
-                            .label("<b>Plug into power</b> before you begin.")
-                            .use_markup(true)
-                            .xalign(0.0)
-                            .build()
-                    );
-                };
+                gtk::ScrolledWindowBuilder::new()
+                    .hexpand(true)
+                    .vexpand(true)
+                    .build();
+                ..add(&changelog_container);
             });
         };
 
