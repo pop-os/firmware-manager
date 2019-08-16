@@ -182,7 +182,7 @@ impl State {
                         .rev()
                         .map(|release| (release.version.as_ref(), release.description.as_ref()));
 
-                    crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
+                    crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
                 });
 
                 return;
@@ -200,7 +200,7 @@ impl State {
                         )
                     });
 
-                    crate::changelog::generate_widget(log_entries, true).upcast::<gtk::Container>()
+                    crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
                 });
 
                 return;
@@ -226,7 +226,7 @@ impl State {
             state.entities.associate_system(entity);
 
             if let Some(latest) = info.latest {
-                if latest.as_ref() != info.current.as_ref() {
+                if latest != info.current {
                     widget.stack.show();
                     let sender = state.ui_sender.clone();
                     widget.connect_upgrade_clicked(move || {

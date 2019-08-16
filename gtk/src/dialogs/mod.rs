@@ -21,11 +21,18 @@ impl FirmwareUpdateDialog {
         changelog: I,
         has_battery: bool,
     ) -> Self {
-        let changelog_entries = crate::changelog::generate_widget(changelog, false);
+        let changelog_entries = crate::changelog::generate_widget(changelog);
 
-        let header_text =
-            ["Firmware version ", version.trim(), " is available. Fixes and features include:"]
-                .concat();
+        let header = ["Firmware version ", version, " is available."].concat();
+
+        let changelog_container = cascade! {
+            gtk::Box::new(gtk::Orientation::Vertical, 12);
+            ..set_vexpand(true);
+            ..add(&gtk::LabelBuilder::new().label(&*header).xalign(0.0).build());
+            ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
+            ..add(&changelog_entries);
+            ..show_all();
+        };
 
         let cancel = gtk::Button::new_with_label("Cancel");
 
@@ -78,20 +85,12 @@ impl FirmwareUpdateDialog {
             );
             ..add(&cascade! {
                 content: gtk::Box::new(gtk::Orientation::Vertical, 6);
-                ..add(
-                    &gtk::LabelBuilder::new()
-                        .label(&*header_text)
-                        .wrap(true)
-                        .use_markup(true)
-                        .xalign(0.0)
-                        .build()
-                );
                 ..add(&cascade! {
                     gtk::ScrolledWindowBuilder::new()
                         .hexpand(true)
                         .vexpand(true)
                         .build();
-                    ..add(&changelog_entries);
+                    ..add(&changelog_container);
                 });
                 | if has_battery {
                     content.add(
