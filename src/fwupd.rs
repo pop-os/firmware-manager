@@ -2,7 +2,7 @@
 
 use crate::{FirmwareInfo, FirmwareSignal};
 use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
-use std::{error::Error as _, io, process::Command};
+use std::{cmp::Ordering, error::Error as _, io, process::Command};
 
 /// A signal sent when a fwupd-compatible device has been discovered.
 #[derive(Debug)]
@@ -31,7 +31,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
                 crate::sort_versions(&mut releases);
 
                 let latest = releases.iter().last().expect("no releases");
-                let upgradeable = latest.version != device.version;
+                let upgradeable = is_newer(&device.version, &latest.version);
 
                 sender(FirmwareSignal::Fwupd(FwupdSignal {
                     info: FirmwareInfo {
@@ -49,7 +49,6 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     }
 }
 
-#[cfg(feature = "fwupd")]
 pub fn fwupdmgr_refresh() -> io::Result<()> {
     Command::new("fwupdmgr").arg("refresh").status().map(|_| ())
 }
@@ -94,4 +93,19 @@ pub fn fwupd_updates(
     }
 
     Ok(())
+}
+
+fn is_newer(current: &str, latest: &str) -> bool {
+    human_sort::compare(current, latest) == Ordering::Less
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    pub fn is_newer() {
+        assert!(super::is_newer("0.2.8", "0.2.11"));
+        assert!(!super::is_newer("0.2.11", "0.2.8"));
+        assert!(super::is_newer("0.2.7", "0.2.8"));
+        assert!(!super::is_newer("0.2.8", "0.2.7"));
+    }
 }
