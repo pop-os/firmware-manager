@@ -9,6 +9,7 @@ use std::rc::Rc;
 pub const APP_ID: &str = "com.system76.FirmwareManager";
 
 fn main() {
+    better_panic::install();
     glib::set_program_name(APP_ID.into());
     gtk::init().expect("failed to init GTK");
 

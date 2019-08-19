@@ -10,6 +10,7 @@ fwupd = []
 system76 = []
 
 [dependencies]
+better-panic = "0.1"
 cascade = "0.1"
 err-derive = "0.1"
 gio = "0.7"
