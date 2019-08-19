@@ -174,15 +174,16 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
 
     #[cfg(feature = "fwupd")]
-    let fwupd = get_client::<_, _, fwupd_dbus::Error>(
-        "fwupd",
-        || true,
-        || {
+    let fwupd = {
+        // Use Ping() to wake up fwupd, and to check if it exists.
+        let fwupd_connect = || {
             let client = FwupdClient::new()?;
             client.ping()?;
             Ok(client)
-        },
-    );
+        };
+
+        get_client::<_, _, fwupd_dbus::Error>("fwupd", || true, fwupd_connect)
+    };
 
     #[cfg(feature = "fwupd")]
     let http_client = &reqwest::Client::new();
