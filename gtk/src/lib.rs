@@ -73,6 +73,7 @@ impl FirmwareWidget {
         let info_bar_label = cascade! {
             gtk::Label::new(None);
             ..set_line_wrap(true);
+            ..set_selectable(true);
             ..show();
         };
 
