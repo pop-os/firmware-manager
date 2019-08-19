@@ -575,6 +575,7 @@ dependencies = [
  "shrinkwraprs 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slotmap 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "system76-firmware-daemon 0.1.0 (git+https://github.com/pop-os/system76-firmware)",
+ "xdg 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

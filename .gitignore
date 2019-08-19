@@ -2,7 +2,7 @@
 .vscode
 .idea
 vendor
-vendor.tar.xz
+vendor.tar
 target
 gtk/Cargo.toml
 gtk/ffi/Cargo.toml

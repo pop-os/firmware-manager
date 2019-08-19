@@ -4,6 +4,8 @@ extern crate err_derive;
 #[macro_use]
 extern crate shrinkwraprs;
 
+mod cache;
+mod timestamp;
 mod version_sorting;
 
 #[cfg(feature = "fwupd")]
@@ -39,6 +41,8 @@ use std::{
     process::Command,
     sync::{mpsc::Receiver, Arc},
 };
+
+const DAY: u64 = 60 * 60 * 24;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -204,15 +208,26 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 #[cfg(feature = "fwupd")]
                 {
                     if let Some(ref client) = fwupd {
-                        // TODO: fwupd gives an error about an invalid signature. Use this once we
-                        // figure out why       this keeps happening with
-                        // our client. if let Err(why) =
-                        // fwupd_updates(client, http_client) {
+                        // TODO: Figure out why the signature is invalid.
+                        // if let Err(why) = fwupd_updates(client, http_client) {
                         //     eprintln!("failed to update fwupd remotes: {}", why);
                         // }
 
-                        if let Err(why) = fwupdmgr_refresh() {
-                            eprintln!("failed to refresh remotes: {}", why);
+                        if timestamp::exceeded(DAY).ok().unwrap_or(true) {
+                            eprintln!("refreshing remotes");
+                            match fwupdmgr_refresh() {
+                                Err(why) => {
+                                    eprintln!("failed to refresh remotes: {}", format_error(why))
+                                }
+                                Ok(()) => {
+                                    if let Err(why) = timestamp::refresh() {
+                                        eprintln!(
+                                            "failed to update local timestamp: {}",
+                                            format_error(why)
+                                        );
+                                    }
+                                }
+                            }
                         }
 
                         fwupd_scan(client, sender);
@@ -331,6 +346,18 @@ fn lowest_revision<'a, I: Iterator<Item = &'a str>>(mut list: I) -> &'a str {
         }
         None => "",
     }
+}
+
+/// Helper for formatting errors for logs.
+fn format_error<E: std::error::Error>(why: E) -> String {
+    let mut error_message = format!("{}", why);
+    let mut cause = why.source();
+    while let Some(error) = cause {
+        error_message.push_str(format!(": {}", error).as_str());
+        cause = error.source();
+    }
+
+    error_message
 }
 
 #[cfg(test)]
