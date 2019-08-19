@@ -32,6 +32,25 @@ Pop!_OS will be integrating a patch into GNOME Settings which embeds the GTK wid
 
 ![Screenshot of GNOME Settings Integration](screenshots/gnome-settings.png)
 
+## Distributing Firmware Manager
+
+When packaging the firmware manager with the GTK frontend, the only dependencies required are `libdbus`, `libgtk`, and `libssl`. The firmware manager uses DBus to communicate with the `system76-firmware` and `fwupd` daemons. Both of which are optional and do not need to be installed in order to use or compile the project. The firmware manager has an initial check for the existence of either daemon. If no daemon is installed, no firmware will be found. If one daemon is installed, then it will discover firmware managed by that service, if managed firmware is found on the system.
+ 
+ As it is written in [Rust], Rustc and its Cargo counterpart are required to compile the project. The [rust-toolchain file] in the root directory of the source repository defines the minimum-supported version of the compiler. We will always depend on a version of Rust that is packaged in the most recent LTS of Ubuntu. [You can check what Ubuntu supports here].
+
+To package the project so that it can be built offline in a schroot, there is a `make vendor` rule which uses the official `cargo-vendor` utility to fetch all crate dependencies locally, and then generates a tarball which can be distributed in or alongside your source packages. You can then instruct the makefile to build the project with the vendored dependencies by setting `VENDOR=1`, like so: `make VENDOR=1 prefix=/usr`.
+
+> If your version of Cargo does not have the `cargo-vendor` feature, [you can install cargo-vendor separately here].
+
+For any unfamiliar with Rust, crates are modules of source code with specific functionality that can be massively distributed through public registries like [Crates.io], or fetched directly by URL. They are statically-linked when used in a project which builds a library or binary. For applications, Cargo generates a [Cargo.lock file] which specifies the exact version of every crate that is depended on, and their SHA256 sums. This is to ensure that anyone pulling the project will have the same versions for crate dependencies as used by upstream.
+
+[rust]: https://www.rust-lang.org/
+[rust-toolchain file]: ./rust-toolchain
+[cargo.lock file]: ./Cargo.lock
+[crates.io]: https://crates.io
+[You can check what Ubuntu supports here]: https://packages.ubuntu.com/search?keywords=rustc
+[you can install cargo-vendor separately here]: https://github.com/alexcrichton/cargo-vendor
+
 ## Implementation Details
 
 Like all of our projects today, it is written in Rust, and adheres to current best practices. The project is configured as a workspace, with the core crate providing a generic library for discovering and managing firmware from multiple firmware services. Both `fwupd` and `system76-firmware` are supported.
@@ -78,7 +97,7 @@ Frontends are expected to store information about devices in the included entity
 This project uses a Makefile. When building the application, the `prefix` flag must be provided, so that the desktop entry file is generated to point to the correct path of the target binary after installation.
 
 ```sh
-make prefix=/usr features='fwupd system76'
+make prefix=/usr
 sudo make install prefix=/usr
 ```
 
@@ -88,21 +107,12 @@ Note that the generated desktop entry is stored in the `target` directory, where
 make desktop prefix=/usr
 ```
 
-### Conditional Features
-
-There are also two conditional features of the crate:
-
-- `system76`: enables support for the system76-firmware daemon
-- `fwupd`: enables support for the fwupd DBus daemon
-
-If no feature is provided to `make`, the default is to enable both.
-
 ### Debug Binaries
 
 To build a debug binary, pass `DEBUG=1` into make.
 
 ```sh
-make prefix=/usr features='fwupd system76' DEBUG=1
+make prefix=/usr DEBUG=1
 sudo make install DEBUG=1
 ```
 
@@ -112,7 +122,7 @@ To vendor the project for packaging, call `make vendor`. To build a project that
 
 ```sh
 make vendor
-make prefix=/usr features='fwupd system76' VENDOR=1
+make prefix=/usr VENDOR=1
 ```
 
 ## API Overview
