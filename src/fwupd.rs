@@ -31,23 +31,32 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 
     for device in devices {
         if device.is_supported() {
-            if let Ok(mut releases) = fwupd.releases(&device) {
-                crate::sort_versions(&mut releases);
+            match fwupd.releases(&device) {
+                Ok(mut releases) => {
+                    crate::sort_versions(&mut releases);
 
-                let latest = releases.iter().last().expect("no releases");
-                let upgradeable = is_newer(&device.version, &latest.version);
+                    let latest = releases.iter().last().expect("no releases");
+                    let upgradeable = is_newer(&device.version, &latest.version);
 
-                sender(FirmwareSignal::Fwupd(FwupdSignal {
-                    info: FirmwareInfo {
-                        name:             [&device.vendor, " ", &device.name].concat().into(),
-                        current:          device.version.clone(),
-                        latest:           Some(latest.version.clone()),
-                        install_duration: latest.install_duration,
-                    },
-                    device,
-                    upgradeable,
-                    releases,
-                }));
+                    sender(FirmwareSignal::Fwupd(FwupdSignal {
+                        info: FirmwareInfo {
+                            name:             [&device.vendor, " ", &device.name].concat().into(),
+                            current:          device.version.clone(),
+                            latest:           Some(latest.version.clone()),
+                            install_duration: latest.install_duration,
+                        },
+                        device,
+                        upgradeable,
+                        releases,
+                    }));
+                }
+                Err(why) => {
+                    error!(
+                        "failure to get fwupd releases for {}: {}",
+                        device.name,
+                        super::format_error(why)
+                    );
+                }
             }
         }
     }
