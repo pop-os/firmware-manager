@@ -13,10 +13,11 @@ pub fn install(filter: LevelFilter) -> Result<(), InitError> {
 
         match (record.file(), record.line()) {
             (Some(file), Some(line)) => format!(
-                "{} {}:{}",
-                Paint::new(target).bold(),
-                Paint::magenta(file),
-                Paint::cyan(line)
+                "{} {}{}{}",
+                Paint::blue(target).bold(),
+                Paint::magenta(file).bold(),
+                Paint::new(":").bold(),
+                Paint::cyan(line).bold()
             ),
             _ => String::new(),
         }
