@@ -39,10 +39,7 @@ pub fn refresh() -> Result<(), Error> {
 
 /// Determines if the time since the last recorded timestamp has exceeded `seconds`.
 pub fn exceeded(seconds: u64) -> Result<bool, Error> {
-    last().map(|last| {
-        let current = current();
-        current == 0 || last > current || current - last > seconds
-    })
+    last().map(|last| time_exceeded(last, current(), seconds))
 }
 
 /// Convenience function for fetching the current time in seconds since the UNIX Epoch.
@@ -54,7 +51,22 @@ pub fn current() -> u64 {
         .unwrap_or(0)
 }
 
+fn time_exceeded(last: u64, current: u64, limit: u64) -> bool {
+    current == 0 || last > current || current - last > limit
+}
+
 /// Convenience function for fetching the path to the timestamp file.
 fn timestamp_path() -> Result<PathBuf, Error> { cache::cache("timestamp").map_err(Error::Cache) }
 
-// TODO: Add unit tests.
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn time_exceeded() {
+        assert!(super::time_exceeded(0, 0, 500));
+        assert!(super::time_exceeded(124512, 0, 500));
+        assert!(super::time_exceeded(0, 124512, 500));
+        assert!(super::time_exceeded(1000, 2000, 500));
+        assert!(super::time_exceeded(1000, 1501, 500));
+        assert!(!super::time_exceeded(1000, 1250, 500));
+    }
+}
