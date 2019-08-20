@@ -7,9 +7,13 @@ use std::{cmp::Ordering, error::Error as _, io, process::Command};
 /// A signal sent when a fwupd-compatible device has been discovered.
 #[derive(Debug)]
 pub struct FwupdSignal {
+    /// Generic information about the firmware.
     pub info:        FirmwareInfo,
+    /// Information specific to fwupd devices.
     pub device:      FwupdDevice,
+    /// Tracks whether the firmware is upgradeable or not.
     pub upgradeable: bool,
+    /// All releases that were found for the firmware.
     pub releases:    Vec<FwupdRelease>,
 }
 
@@ -51,6 +55,9 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
     info!("fwupd scanning complete");
 }
 
+/// Refreshes the fwupd remote cache with `fwupdmgr refresh`.
+///
+/// NOTE: This is a temporary measure until we figure out the cause of the invalid signatures errors.
 pub fn fwupdmgr_refresh() -> io::Result<()> {
     Command::new("fwupdmgr").arg("refresh").status().map(|_| ())
 }

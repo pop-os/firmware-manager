@@ -1,3 +1,10 @@
+#![deny(missing_docs)]
+
+//! # Firmware Manager Core
+//!
+//! The firmware manager core manages all firmware tasks in an event loop, and provides a handful of
+//! useful capabilities that are useful to frontends of the firmware manager.
+
 #[macro_use]
 extern crate err_derive;
 #[macro_use]
@@ -46,11 +53,14 @@ use std::{
 
 const DAY: u64 = 60 * 60 * 24;
 
+/// Errors that may occur in the firmware manager core.
 #[derive(Debug, Error)]
 pub enum Error {
+    /// Errors specific to fwupd devices.
     #[cfg(feature = "fwupd")]
     #[error(display = "error in fwupd client")]
     Fwupd(#[error(cause)] fwupd_dbus::Error),
+    /// Errors specific to system76 devices.
     #[cfg(feature = "system76")]
     #[error(display = "error in system76-firmware client")]
     System76(#[error(cause)] System76Error),
@@ -100,10 +110,15 @@ pub struct FirmwareInfo {
     /// The latest version of firmware for this device.
     pub latest: Option<Box<str>>,
 
-    // The time required for this firmware to be flashed, in seconds.
+    /// The time required for this firmware to be flashed, in seconds.
     pub install_duration: u32,
 }
 
+/// A collection of all firmware device entities that a frontend is managing.
+///
+/// This only contains the entity keys, and whether that entity is system firmware or not.
+/// The frontend is responsible for creating secondary maps that will store data specific to
+/// the entities contained within this map.
 #[derive(Debug, Default, Shrinkwrap)]
 pub struct Entities {
     /// The primary storage to record all device entities.
@@ -130,6 +145,11 @@ impl Entities {
     pub fn is_system(&self, entity: Entity) -> bool { self.system.contains_key(entity) }
 }
 
+/// Signals that the firmware manager core will send to a frontend.
+///
+/// This will keep a frontend informed on the current progress of an action, or events which have
+/// been triggered. Entity keys are assigned with most types of events to associate the events with
+/// the firmware devices which initiated the event.
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum FirmwareSignal {
