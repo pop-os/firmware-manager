@@ -72,35 +72,48 @@ pub fn fwupd_updates(
 
     const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
 
-    // NOTE: This attribute is required due to a clippy bug.
-    #[allow(clippy::identity_conversion)]
-    for remote in client.remotes()? {
-        if !remote.enabled {
-            continue;
-        }
-
-        if let fwupd_dbus::RemoteKind::Download = remote.kind {
-            let update = remote
-                .time_since_last_update()
-                .map_or(true, |since| since > Duration::from_secs(14 * SECONDS_IN_DAY));
-
-            if update {
-                info!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
-                if let Err(why) = remote.update_metadata(client, http) {
-                    let mut error_message = format!("{}", why);
-                    let mut cause = why.source();
-                    while let Some(error) = cause {
-                        error_message.push_str(format!(": {}", error).as_str());
-                        cause = error.source();
-                    }
-                    error!(
-                        "failed to fetch updates from {}: {:?}",
-                        remote.filename_cache, error_message
-                    );
+    if crate::timestamp::exceeded(SECONDS_IN_DAY).ok().unwrap_or(true) {
+        info!("refreshing remotes");
+        match fwupdmgr_refresh() {
+            Err(why) => error!("failed to refresh remotes: {}", super::format_error(why)),
+            Ok(()) => {
+                if let Err(why) = crate::timestamp::refresh() {
+                    error!("failed to update local timestamp: {}", super::format_error(why));
                 }
             }
         }
     }
+
+    // TODO: Figure out why the signature is invalid.
+    // // NOTE: This attribute is required due to a clippy bug.
+    // #[allow(clippy::identity_conversion)]
+    //  for remote in client.remotes()? {
+    //      if !remote.enabled {
+    //          continue;
+    //      }
+    //
+    //      if let fwupd_dbus::RemoteKind::Download = remote.kind {
+    //          let update = remote
+    //              .time_since_last_update()
+    //              .map_or(true, |since| since > Duration::from_secs(14 * SECONDS_IN_DAY));
+    //
+    //          if update {
+    //              info!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
+    //              if let Err(why) = remote.update_metadata(client, http) {
+    //                  let mut error_message = format!("{}", why);
+    //                  let mut cause = why.source();
+    //                  while let Some(error) = cause {
+    //                      error_message.push_str(format!(": {}", error).as_str());
+    //                      cause = error.source();
+    //                  }
+    //                  error!(
+    //                      "failed to fetch updates from {}: {:?}",
+    //                      remote.filename_cache, error_message
+    //                  );
+    //              }
+    //          }
+    //      }
+    //  }
 
     Ok(())
 }

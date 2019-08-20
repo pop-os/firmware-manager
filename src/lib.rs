@@ -51,8 +51,6 @@ use std::{
     sync::{mpsc::Receiver, Arc},
 };
 
-const SECONDS_IN_A_DAY: u64 = 60 * 60 * 24;
-
 /// Errors that may occur in the firmware manager core.
 #[derive(Debug, Error)]
 pub enum Error {
@@ -231,28 +229,9 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 #[cfg(feature = "fwupd")]
                 {
                     if let Some(ref client) = fwupd {
-                        // TODO: Figure out why the signature is invalid.
-                        // if let Err(why) = fwupd_updates(client, http_client) {
-                        //     eprintln!("failed to update fwupd remotes: {}", why);
-                        // }
-
-                        if timestamp::exceeded(SECONDS_IN_A_DAY).ok().unwrap_or(true) {
-                            info!("refreshing remotes");
-                            match fwupdmgr_refresh() {
-                                Err(why) => {
-                                    error!("failed to refresh remotes: {}", format_error(why))
-                                }
-                                Ok(()) => {
-                                    if let Err(why) = timestamp::refresh() {
-                                        error!(
-                                            "failed to update local timestamp: {}",
-                                            format_error(why)
-                                        );
-                                    }
-                                }
-                            }
+                        if let Err(why) = fwupd_updates(client, http_client) {
+                            eprintln!("failed to update fwupd remotes: {}", why);
                         }
-
                         fwupd_scan(client, sender);
                     }
                 }
