@@ -35,6 +35,7 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
 };
+use yansi::Paint;
 
 /// Activates, or deactivates, the movement of progress bars.
 /// TODO: As soon as glib::WeakRef supports Eq/Hash derives, use WeakRef instead.
@@ -204,7 +205,7 @@ impl FirmwareWidget {
         use crate::{Event::*, FirmwareSignal::*, UiEvent::*};
         let mut last_active_revealer = None;
         receiver.attach(None, move |event| {
-            trace!("received UI event: {:#?}", event);
+            trace!("received UI event: {:#?}", Paint::yellow(&event));
             match event {
                 // When a device begins flashing, we can begin moving the progress bar based on
                 // its duration.
