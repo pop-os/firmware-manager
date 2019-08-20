@@ -67,6 +67,11 @@ impl FirmwareWidget {
 
         let (sender, rx) = channel();
 
+        let tx_udev = sender.clone();
+        usb_hotplug_event_loop(move || {
+            let _ = tx_udev.send(FirmwareEvent::Scan);
+        });
+
         let view_devices = DevicesView::new();
         let view_empty = EmptyView::new();
 
