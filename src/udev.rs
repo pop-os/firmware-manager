@@ -14,6 +14,8 @@ macro_rules! ok_or_return {
 /// Convenience function for an event loop which reacts to USB hotplug events.
 pub fn usb_hotplug_event_loop<F: Fn() + Send + 'static>(func: F) {
     thread::spawn(move || {
+        trace!("initiating USB hotplug event loop thread");
+
         let context = ok_or_return!(Context::new());
         let mut builder = ok_or_return!(MonitorBuilder::new(&context));
         ok_or_return!(builder.match_subsystem_devtype("usb", "usb_device"));
@@ -27,6 +29,7 @@ pub fn usb_hotplug_event_loop<F: Fn() + Send + 'static>(func: F) {
             Ok(())
         };
 
+        trace!("USB hotplug events now being processed");
         tokio::run(monitor.for_each(handler).map_err(|_| ()));
     });
 }

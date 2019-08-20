@@ -8,6 +8,8 @@ use system76_firmware_daemon::{
 
 /// Scan for available System76 firmware
 pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
+    info!("scanning for system76 devices");
+
     // Thelio system firmware check.
     if let Ok(current) = client.bios() {
         let info = match client.download() {
@@ -19,7 +21,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                     error_message.push_str(format!(": {}", error).as_str());
                     cause = error.source();
                 }
-                eprintln!("failed to download system76 changelog: {}", error_message);
+                error!("failed to download system76 changelog: {}", error_message);
                 None
             }
         };
@@ -38,6 +40,8 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
         sender(FirmwareSignal::S76System(fw, info));
     }
 
+    info!("scanning for Thelio I/O devices");
+
     // Thelio I/O system firmware check.
     let event = match client.thelio_io_list() {
         Ok(list) => {
@@ -55,7 +59,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                         (Some(revision), Some(digest))
                     }
                     Err(why) => {
-                        eprintln!("failed to download Thelio I/O digest: {:?}", why);
+                        error!("failed to download Thelio I/O digest: {:?}", why);
                         (None, None)
                     }
                 };
@@ -76,6 +80,8 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     if let Some(event) = event {
         sender(event);
     }
+
+    info!("finished scanning for system76 devices")
 }
 
 /// Check if the system76-firmware-daemon service is active.

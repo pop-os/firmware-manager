@@ -15,7 +15,7 @@ pub struct FwupdSignal {
 
 /// Scan for supported devices from the fwupd DBus daemon.
 pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
-    eprintln!("scanning fwupd devices");
+    info!("scanning fwupd devices");
 
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
@@ -47,6 +47,8 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
             }
         }
     }
+
+    info!("fwupd scanning complete");
 }
 
 pub fn fwupdmgr_refresh() -> io::Result<()> {
@@ -75,7 +77,7 @@ pub fn fwupd_updates(
                 .map_or(true, |since| since > Duration::from_secs(14 * SECONDS_IN_DAY));
 
             if update {
-                eprintln!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
+                info!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
                 if let Err(why) = remote.update_metadata(client, http) {
                     let mut error_message = format!("{}", why);
                     let mut cause = why.source();
@@ -83,7 +85,7 @@ pub fn fwupd_updates(
                         error_message.push_str(format!(": {}", error).as_str());
                         cause = error.source();
                     }
-                    eprintln!(
+                    error!(
                         "failed to fetch updates from {}: {:?}",
                         remote.filename_cache, error_message
                     );

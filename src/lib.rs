@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate err_derive;
-
+#[macro_use]
+extern crate log;
 #[macro_use]
 extern crate shrinkwraprs;
 
@@ -194,6 +195,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
     let http_client = &reqwest::Client::new();
 
     while let Ok(event) = receiver.recv() {
+        trace!("event loop received firmware event: {:?}", event);
         match event {
             FirmwareEvent::Scan => {
                 let sender = &sender;
@@ -215,14 +217,14 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                         // }
 
                         if timestamp::exceeded(DAY).ok().unwrap_or(true) {
-                            eprintln!("refreshing remotes");
+                            info!("refreshing remotes");
                             match fwupdmgr_refresh() {
                                 Err(why) => {
-                                    eprintln!("failed to refresh remotes: {}", format_error(why))
+                                    error!("failed to refresh remotes: {}", format_error(why))
                                 }
                                 Ok(()) => {
                                     if let Err(why) = timestamp::refresh() {
-                                        eprintln!(
+                                        error!(
                                             "failed to update local timestamp: {}",
                                             format_error(why)
                                         );
@@ -291,7 +293,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 sender(event);
             }
             FirmwareEvent::Stop => {
-                eprintln!("received quit signal");
+                trace!("received quit signal");
                 break;
             }
         }
@@ -319,7 +321,7 @@ where
     E: std::fmt::Display,
 {
     if is_active() {
-        connect().map_err(|why| eprintln!("{} client error: {}", name, why)).ok()
+        connect().map_err(|why| error!("{} client error: {}", name, why)).ok()
     } else {
         None
     }
@@ -329,7 +331,7 @@ fn systemd_service_is_active(name: &str) -> bool {
     Command::new("systemctl")
         .args(&["-q", "is-active", name])
         .status()
-        .map_err(|why| eprintln!("{}", why))
+        .map_err(|why| error!("{}", why))
         .ok()
         .map_or(false, |status| status.success())
 }
