@@ -1,5 +1,6 @@
 use gtk::prelude::*;
 
+/// The empty view is displayed when scanning has completed, but no firmware was found.
 #[derive(Shrinkwrap)]
 pub struct EmptyView {
     #[shrinkwrap(main_field)]

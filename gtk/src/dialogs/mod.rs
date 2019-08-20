@@ -12,6 +12,11 @@ pub use self::fwupd::FwupdDialog;
 #[cfg(feature = "system76")]
 pub use self::system76::System76Dialog;
 
+/// A generic GTK dialog which is displayed for firmware which requires a system reboot.
+///
+/// This dialog displays a changelog covering the details of the updates, and all prior updates, as
+/// well as a confirmation button that will initiate configuring the system to be rebooted into the
+/// firmware upgrade environment.
 #[derive(Shrinkwrap)]
 pub struct FirmwareUpdateDialog(gtk::Dialog);
 

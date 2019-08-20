@@ -3,6 +3,12 @@ use firmware_manager::FirmwareInfo;
 use gtk::prelude::*;
 use std::num::NonZeroU8;
 
+/// The devices view is displayed when devices are found.
+///
+/// It consists of a collection of system firmware which requires a reboot to flash, and device
+/// firmware which does not. The `system()` and `device()` methods will create and add device
+/// widges to their appropriate list boxes, and will return the created device widget so that we
+/// can program its signals.
 #[derive(Shrinkwrap)]
 pub struct DevicesView {
     #[shrinkwrap(main_field)]
@@ -137,41 +143,52 @@ impl DevicesView {
         }
     }
 
+    /// Clears all device widgets from the system and device list boxes.
     pub fn clear(&self) {
         self.system_firmware.foreach(WidgetExt::destroy);
         self.device_firmware.foreach(WidgetExt::destroy);
     }
 
+    /// Creates and attaches a new device widget to the device section.
     pub fn device(&self, info: &FirmwareInfo) -> DeviceWidget {
         self.show_devices();
         self.append(&self.device_firmware, info)
     }
 
+    /// Creates and attaches a new device widget to the system section.
     pub fn system(&self, info: &FirmwareInfo) -> DeviceWidget {
         self.show_systems();
         self.append(&self.system_firmware, info)
     }
 
+    /// Hides the device section so that it does not appear to the end user.
     pub fn hide_devices(&self) {
         self.device_firmware.hide();
         self.device_header.hide();
     }
 
+    /// Hides the system section so that it does not appear to the end user.
     pub fn hide_systems(&self) {
         self.system_firmware.hide();
         self.system_header.hide();
     }
 
+    /// Shows the device section, which is triggered when a device widget is added.
     fn show_devices(&self) {
         self.device_firmware.show();
         self.device_header.show();
     }
 
+    /// Shows the system section, which is triggered when a device widget is added.
     fn show_systems(&self) {
         self.system_firmware.show();
         self.system_header.show();
     }
 
+    /// Convenience method shared by both the device and system methods.
+    ///
+    /// This is responsible for creating a device widget and assigning it to the given parent
+    /// container.
     fn append(&self, parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
         let widget = DeviceWidget::new(info);
         self.sg.add_widget(&widget.event_box);
@@ -180,6 +197,7 @@ impl DevicesView {
     }
 }
 
+/// Inserts a separator as a header between rows in a list box.
 fn separator_header(current: &gtk::ListBoxRow, before: Option<&gtk::ListBoxRow>) {
     if before.is_some() {
         current.set_header(Some(&gtk::Separator::new(gtk::Orientation::Horizontal)));

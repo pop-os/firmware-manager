@@ -88,6 +88,9 @@ fn main() {
     application.run(&[]);
 }
 
+/// Manages argument parsing for the GTK application via clap.
+///
+/// Currently the primary purpose is to determine the logging level.
 fn argument_parsing() {
     use clap::{App, Arg};
     use log::LevelFilter;

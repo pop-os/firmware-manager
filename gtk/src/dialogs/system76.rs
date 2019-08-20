@@ -4,6 +4,7 @@ use firmware_manager::{Entity, FirmwareEvent, System76Changelog, System76Digest}
 use gtk::prelude::*;
 use std::sync::mpsc::Sender;
 
+/// An instance of the firmware update dialog specific to system76-managed system devices.
 pub struct System76Dialog<'a> {
     pub changelog:   &'a System76Changelog,
     pub digest:      &'a System76Digest,

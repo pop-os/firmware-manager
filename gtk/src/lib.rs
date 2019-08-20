@@ -1,3 +1,15 @@
+#![deny(missing_docs)]
+
+//! # Firmware Manager GTK
+//!
+//! This crate is a frontend for the firmware manager to be used with GTK-based desktop
+//! environments. Only GTK-specific application logic is contained here. All application logic is
+//! delegated to the core which this wraps.
+//!
+//! See the [application crate] for an example of how this can be integrated into an application.
+//!
+//! [application crate]: ./main.rs
+
 #[macro_use]
 extern crate cascade;
 #[macro_use]
@@ -39,6 +51,7 @@ pub struct FirmwareWidget {
     background: Option<JoinHandle<()>>,
 }
 
+/// An event which the GTK UI may propagate to the event loop in the main context.
 #[derive(Debug)]
 enum UiEvent {
     /// It was requested to hide the upgrade stack of an entity
@@ -51,6 +64,10 @@ enum UiEvent {
     Update(Entity),
 }
 
+/// An event that requests for the UI to perform a specific action.
+///
+/// This are sent to the glib channel receiver attached to the main context.
+/// All events are managed in a central location with shared state.
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 enum Event {
@@ -390,6 +407,10 @@ impl Drop for FirmwareWidget {
     }
 }
 
+/// Convenience function for rebooting the system.
+///
+/// Currently only supports rebooting via `systemctl`. Feature flags could use other init system
+/// facilities to do the same.
 fn reboot() {
     if let Err(why) = Command::new("systemctl").arg("reboot").status() {
         error!("failed to reboot: {}", why);

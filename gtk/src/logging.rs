@@ -3,6 +3,7 @@ use log::{Level, LevelFilter, Record};
 use std::io;
 use yansi::Paint;
 
+/// Installs the fern logger, which manages all logs created with `log` statements.
 pub fn install(filter: LevelFilter) -> Result<(), InitError> {
     let location = |record: &Record| {
         let mut target = record.target();

@@ -23,6 +23,10 @@ impl DeviceWidgetStack {
     }
 }
 
+/// A device widget which displays generic information about a managed device.
+///
+/// The `connect_clicked()` and `connect_upgrade_clicked()` methods are used to program the actions
+/// that are triggered when either the widget or its upgrade button are clicked.
 #[derive(Shrinkwrap)]
 pub struct DeviceWidget {
     #[shrinkwrap(main_field)]
@@ -34,6 +38,7 @@ pub struct DeviceWidget {
 }
 
 impl DeviceWidget {
+    /// Creates a new device widget using the generic information from the firmware manager.
     pub fn new(info: &FirmwareInfo) -> Self {
         let device = gtk::LabelBuilder::new()
             .label(info.name.as_ref())

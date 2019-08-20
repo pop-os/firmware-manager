@@ -4,6 +4,7 @@ use firmware_manager::{Entity, FirmwareEvent, FwupdDevice, FwupdRelease};
 use gtk::prelude::*;
 use std::sync::{mpsc::Sender, Arc};
 
+/// An instance of the firmware update dialog specific to fwupd-managed system devices.
 pub struct FwupdDialog<'a> {
     pub device:       &'a FwupdDevice,
     pub entity:       Entity,
