@@ -6,6 +6,7 @@ extern crate shrinkwraprs;
 
 mod cache;
 mod timestamp;
+mod udev;
 mod version_sorting;
 
 #[cfg(feature = "fwupd")]
@@ -32,9 +33,9 @@ pub use self::system76::*;
 #[cfg(feature = "system76")]
 pub use system76_firmware_daemon::Client as System76Client;
 
-pub use slotmap::DefaultKey as Entity;
-
+pub use self::udev::usb_hotplug_event_loop;
 use self::version_sorting::sort_versions;
+pub use slotmap::DefaultKey as Entity;
 use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
     io,
