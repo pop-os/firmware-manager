@@ -6,34 +6,38 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+/// An error that may occur when reading or writing the timestamp file.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(display = "cache error")]
     Cache(#[error(cause)] cache::Error),
     #[error(display = "failed to read last update file")]
-    LastUpdate(#[error(cause)] io::Error),
+    Read(#[error(cause)] io::Error),
     #[error(display = "failed to write timestamp")]
-    LastUpdateWrite(#[error(cause)] io::Error),
+    Write(#[error(cause)] io::Error),
     #[error(display = "failed to create cache directory for timestamp file")]
     Parent(#[error(cause)] io::Error),
 }
 
+/// Fetches the timestamp that is currently stored in the cache.
 pub fn last() -> Result<u64, Error> {
     let path = &*timestamp_path()?;
 
     fs::read_to_string(path)
-        .map_err(Error::LastUpdate)
+        .map_err(Error::Read)
         .map(|string| string.trim().parse::<u64>().unwrap_or(0))
 }
 
+/// Refreshes the timestamp in the cache.
 pub fn refresh() -> Result<(), Error> {
     let path = &*timestamp_path()?;
 
     let parent = path.parent().expect("timestmap file does not have a parent directory");
     fs::create_dir_all(parent).map_err(Error::Parent)?;
-    fs::write(path, current().to_string()).map_err(Error::LastUpdateWrite)
+    fs::write(path, current().to_string()).map_err(Error::Write)
 }
 
+/// Determines if the time since the last recorded timestamp has exceeded `seconds`.
 pub fn exceeded(seconds: u64) -> Result<bool, Error> {
     last().map(|last| {
         let current = current();
@@ -41,6 +45,7 @@ pub fn exceeded(seconds: u64) -> Result<bool, Error> {
     })
 }
 
+/// Convenience function for fetching the current time in seconds since the UNIX Epoch.
 pub fn current() -> u64 {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -49,6 +54,7 @@ pub fn current() -> u64 {
         .unwrap_or(0)
 }
 
+/// Convenience function for fetching the path to the timestamp file.
 fn timestamp_path() -> Result<PathBuf, Error> { cache::cache("timestamp").map_err(Error::Cache) }
 
 // TODO: Add unit tests.

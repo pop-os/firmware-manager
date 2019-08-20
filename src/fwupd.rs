@@ -8,13 +8,13 @@ use std::{cmp::Ordering, error::Error as _, io, process::Command};
 #[derive(Debug)]
 pub struct FwupdSignal {
     /// Generic information about the firmware.
-    pub info:        FirmwareInfo,
+    pub info: FirmwareInfo,
     /// Information specific to fwupd devices.
-    pub device:      FwupdDevice,
+    pub device: FwupdDevice,
     /// Tracks whether the firmware is upgradeable or not.
     pub upgradeable: bool,
     /// All releases that were found for the firmware.
-    pub releases:    Vec<FwupdRelease>,
+    pub releases: Vec<FwupdRelease>,
 }
 
 /// Scan for supported devices from the fwupd DBus daemon.
@@ -57,7 +57,8 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 
 /// Refreshes the fwupd remote cache with `fwupdmgr refresh`.
 ///
-/// NOTE: This is a temporary measure until we figure out the cause of the invalid signatures errors.
+/// NOTE: This is a temporary measure until we figure out the cause of the invalid signatures
+/// errors.
 pub fn fwupdmgr_refresh() -> io::Result<()> {
     Command::new("fwupdmgr").arg("refresh").status().map(|_| ())
 }
@@ -104,6 +105,7 @@ pub fn fwupd_updates(
     Ok(())
 }
 
+// Returns `true` if the `latest` string is a newer version than the `current` string.
 fn is_newer(current: &str, latest: &str) -> bool {
     human_sort::compare(current, latest) == Ordering::Less
 }

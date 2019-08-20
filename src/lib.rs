@@ -51,7 +51,7 @@ use std::{
     sync::{mpsc::Receiver, Arc},
 };
 
-const DAY: u64 = 60 * 60 * 24;
+const SECONDS_IN_A_DAY: u64 = 60 * 60 * 24;
 
 /// Errors that may occur in the firmware manager core.
 #[derive(Debug, Error)]
@@ -236,7 +236,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                         //     eprintln!("failed to update fwupd remotes: {}", why);
                         // }
 
-                        if timestamp::exceeded(DAY).ok().unwrap_or(true) {
+                        if timestamp::exceeded(SECONDS_IN_A_DAY).ok().unwrap_or(true) {
                             info!("refreshing remotes");
                             match fwupdmgr_refresh() {
                                 Err(why) => {
@@ -320,16 +320,20 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
     }
 }
 
-fn read_dmi(path: &str) -> io::Result<String> {
+/// Function for getting a timmed string from a file.
+fn read_trimmed(path: &str) -> io::Result<String> {
     let mut vendor = std::fs::read_to_string(path)?;
     vendor.truncate(vendor.trim_end().len());
     Ok(vendor)
 }
 
-fn board_name() -> io::Result<String> { read_dmi("/sys/class/dmi/id/board_name") }
+/// Convenience function for reading the board name from the DMI ID information.
+fn board_name() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/board_name") }
 
-fn board_vendor() -> io::Result<String> { read_dmi("/sys/class/dmi/id/board_vendor") }
+/// Convenience function for reading the board vendor from the DMI ID information.
+fn board_vendor() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/board_vendor") }
 
+/// Creates a string identifying system firmware by the board vendor and name.
 pub(crate) fn system_board_identity() -> io::Result<String> {
     Ok([&*board_vendor()?, " ", &*board_name()?].concat())
 }
@@ -347,6 +351,7 @@ where
     }
 }
 
+/// Checks if a systemd service is active.
 fn systemd_service_is_active(name: &str) -> bool {
     Command::new("systemctl")
         .args(&["-q", "is-active", name])
@@ -356,8 +361,10 @@ fn systemd_service_is_active(name: &str) -> bool {
         .map_or(false, |status| status.success())
 }
 
-fn lowest_revision<'a, I: Iterator<Item = &'a str>>(mut list: I) -> &'a str {
+/// Finds the lowest revision from anything that is or may become an `Iterator` of strings.
+fn lowest_revision<'a, I: IntoIterator<Item = &'a str>>(list: I) -> &'a str {
     use std::cmp::Ordering;
+    let mut list = list.into_iter();
     match list.next() {
         Some(mut lowest_revision) => {
             for rev in list {

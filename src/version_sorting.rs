@@ -1,5 +1,6 @@
 //! Simple version-sorting trait and function.
 
+/// Trait which describes a type which contains a version string.
 pub trait Versioned {
     fn version(&self) -> &str;
 }
