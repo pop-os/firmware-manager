@@ -34,7 +34,7 @@ Pop!_OS will be integrating a patch into GNOME Settings which embeds the GTK wid
 
 ## Distributing Firmware Manager
 
-When packaging the firmware manager with the GTK frontend, the only dependencies required are `libdbus`, `libgtk`, and `libssl`. The firmware manager uses DBus to communicate with the `system76-firmware` and `fwupd` daemons. Both of which are optional and do not need to be installed in order to use or compile the project. The firmware manager has an initial check for the existence of either daemon. If no daemon is installed, no firmware will be found. If one daemon is installed, then it will discover firmware managed by that service, if managed firmware is found on the system.
+When packaging the firmware manager with the GTK frontend, the only dependencies required are `libdbus`, `libgtk`, `libssl`, and `libudev`. The firmware manager uses DBus to communicate with the `system76-firmware` and `fwupd` daemons. Both of which are optional and do not need to be installed in order to use or compile the project. The firmware manager has an initial check for the existence of either daemon. If no daemon is installed, no firmware will be found. If one daemon is installed, then it will discover firmware managed by that service, if managed firmware is found on the system.
  
  As it is written in [Rust], Rustc and its Cargo counterpart are required to compile the project. The [rust-toolchain file] in the root directory of the source repository defines the minimum-supported version of the compiler. We will always depend on a version of Rust that is packaged in the most recent LTS of Ubuntu. [You can check what Ubuntu supports here].
 
