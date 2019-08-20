@@ -333,9 +333,7 @@ impl State {
                 }
             }
         } else {
-            eprintln!(
-                "attempted to update firmware for a device which did not have updated firmware"
-            );
+            error!("attempted to update firmware for a device which did not have updated firmware");
         }
     }
 }

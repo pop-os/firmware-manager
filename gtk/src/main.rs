@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate cascade;
 
+mod logging;
+
 use firmware_manager_gtk::FirmwareWidget;
 use gio::prelude::*;
 use gtk::prelude::*;
@@ -9,6 +11,8 @@ use std::rc::Rc;
 pub const APP_ID: &str = "com.system76.FirmwareManager";
 
 fn main() {
+    argument_parsing();
+
     better_panic::install();
     glib::set_program_name(APP_ID.into());
     gtk::init().expect("failed to init GTK");
@@ -82,4 +86,28 @@ fn main() {
     });
 
     application.run(&[]);
+}
+
+fn argument_parsing() {
+    use clap::{App, Arg};
+    use log::LevelFilter;
+
+    let matches = App::new("com.system76.FirmwareManager")
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .multiple(true)
+                .help("define the logging level; multiple occurrences increases the logging level"),
+        )
+        .get_matches();
+
+    let logging_level = match matches.occurrences_of("verbose") {
+        0 => LevelFilter::Info,
+        1 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    };
+
+    if let Err(why) = logging::install(logging_level) {
+        eprintln!("failed to initiate logging: {}", why);
+    }
 }

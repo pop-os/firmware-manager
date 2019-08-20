@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate cascade;
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate shrinkwraprs;
 
 mod changelog;
@@ -37,6 +39,7 @@ pub struct FirmwareWidget {
     background: Option<JoinHandle<()>>,
 }
 
+#[derive(Debug)]
 enum UiEvent {
     /// It was requested to hide the upgrade stack of an entity
     HideStack(Entity),
@@ -48,6 +51,7 @@ enum UiEvent {
     Update(Entity),
 }
 
+#[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 enum Event {
     Firmware(FirmwareSignal),
@@ -183,6 +187,7 @@ impl FirmwareWidget {
         use crate::{Event::*, FirmwareSignal::*, UiEvent::*};
         let mut last_active_revealer = None;
         receiver.attach(None, move |event| {
+            trace!("received UI event: {:#?}", event);
             match event {
                 // When a device begins flashing, we can begin moving the progress bar based on
                 // its duration.
@@ -228,7 +233,7 @@ impl FirmwareWidget {
                         cause = error.source();
                     }
 
-                    eprintln!("firmware widget error: {}", error_message);
+                    error!("firmware widget error: {}", error_message);
 
                     state.widgets.info_bar.set_visible(true);
                     state.widgets.info_bar_label.set_text(error_message.as_str());
@@ -257,7 +262,7 @@ impl FirmwareWidget {
                 }
                 // Signal is received when scanning has completed.
                 Firmware(ScanningComplete) => {
-                    eprintln!("scanning for firmware is complete");
+                    info!("scanning for firmware is complete");
                     if state.entities.entities.is_empty() {
                         state.widgets.stack.show();
                         state.widgets.view_empty.show_all();
@@ -300,6 +305,7 @@ impl FirmwareWidget {
                 }
                 // This is the last message sent before the background thread exits.
                 Stop => {
+                    trace!("glib channel receiver closed");
                     return glib::Continue(false);
                 }
             }
@@ -318,9 +324,8 @@ impl FirmwareWidget {
                 let _ = sender.send(Event::Firmware(event));
             });
 
+            info!("firmware manager event loop stopped");
             let _ = sender.send(Event::Stop);
-
-            eprintln!("stopping firmware client connection");
         })
     }
 
@@ -350,6 +355,7 @@ impl FirmwareWidget {
                     }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => {
+                        trace!("disconnecting progress event loop");
                         return gtk::Continue(false);
                     }
                 }
@@ -375,6 +381,7 @@ impl Default for FirmwareWidget {
 
 impl Drop for FirmwareWidget {
     fn drop(&mut self) {
+        trace!("firmware widget dropped: sending stop signal to background thread");
         let _ = self.sender.send(FirmwareEvent::Stop);
 
         if let Some(handle) = self.background.take() {
@@ -385,6 +392,6 @@ impl Drop for FirmwareWidget {
 
 fn reboot() {
     if let Err(why) = Command::new("systemctl").arg("reboot").status() {
-        eprintln!("failed to reboot: {}", why);
+        error!("failed to reboot: {}", why);
     }
 }
