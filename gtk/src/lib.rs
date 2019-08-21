@@ -35,6 +35,7 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender, TryRecvError},
     thread::{self, JoinHandle},
 };
+use stream_cancel::Trigger;
 use yansi::Paint;
 
 /// Activates, or deactivates, the movement of progress bars.
@@ -47,9 +48,10 @@ pub(crate) enum ActivateEvent {
 
 /// The complete firmware manager, as a widget structure
 pub struct FirmwareWidget {
-    container:  gtk::Container,
-    sender:     Sender<FirmwareEvent>,
-    background: Option<JoinHandle<()>>,
+    container:   gtk::Container,
+    sender:      Sender<FirmwareEvent>,
+    background:  Option<JoinHandle<()>>,
+    usb_trigger: Option<Trigger>,
 }
 
 /// An event which the GTK UI may propagate to the event loop in the main context.
@@ -90,7 +92,7 @@ impl FirmwareWidget {
         let (sender, rx) = channel();
 
         let tx_udev = sender.clone();
-        usb_hotplug_event_loop(move || {
+        let usb_trigger = usb_hotplug_event_loop(move || {
             let _ = tx_udev.send(FirmwareEvent::Scan);
         });
 
@@ -183,6 +185,7 @@ impl FirmwareWidget {
             background: Some(background),
             container: container.upcast::<gtk::Container>(),
             sender,
+            usb_trigger,
         }
     }
 
