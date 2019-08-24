@@ -8,6 +8,7 @@ markup::define! {
         "\n"
         "[Service]\n"
         "ExecStart=" { markup::raw(exec) } "\n"
+        "Group=sudo\n"
         "\n"
         "[Install]\n"
         "WantedBy=default.target\n"
