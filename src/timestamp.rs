@@ -57,7 +57,7 @@ fn time_exceeded(last: u64, current: u64, limit: u64) -> bool {
 }
 
 /// Convenience function for fetching the path to the timestamp file.
-fn timestamp_path() -> Result<PathBuf, Error> { cache::cache("timestamp").map_err(Error::Cache) }
+fn timestamp_path() -> Result<PathBuf, Error> { cache::cache("last_refresh").map_err(Error::Cache) }
 
 #[cfg(test)]
 mod tests {
