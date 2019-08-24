@@ -32,7 +32,7 @@ use std::{
     collections::HashSet,
     error::Error as _,
     process::Command,
-    sync::mpsc::{channel, Receiver, Sender, TryRecvError},
+    sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc::{channel, Receiver, Sender, TryRecvError}},
     thread::{self, JoinHandle},
 };
 use stream_cancel::Trigger;
@@ -51,7 +51,6 @@ pub struct FirmwareWidget {
     container:   gtk::Container,
     sender:      Sender<FirmwareEvent>,
     background:  Option<JoinHandle<()>>,
-    usb_trigger: Option<Trigger>,
 }
 
 /// An event which the GTK UI may propagate to the event loop in the main context.
@@ -90,11 +89,6 @@ impl FirmwareWidget {
         compile_error!("must enable one or more of [fwupd system76]");
 
         let (sender, rx) = channel();
-
-        let tx_udev = sender.clone();
-        let usb_trigger = usb_hotplug_event_loop(move || {
-            let _ = tx_udev.send(FirmwareEvent::Scan);
-        });
 
         let view_devices = DevicesView::new();
         let view_empty = EmptyView::new();
@@ -185,7 +179,6 @@ impl FirmwareWidget {
             background: Some(background),
             container: container.upcast::<gtk::Container>(),
             sender,
-            usb_trigger,
         }
     }
 
@@ -207,12 +200,27 @@ impl FirmwareWidget {
     fn attach_main_event_loop(mut state: State, receiver: glib::Receiver<Event>) {
         use crate::{Event::*, FirmwareSignal::*, UiEvent::*};
         let mut last_active_revealer = None;
+
+        // TODO: Use a better approach than an Arc<AtomicBool>
+        let firmware_flashing = Arc::new(AtomicBool::new(false));
+        let firmware_flashing_ = firmware_flashing.clone();
+        let tx_udev = state.sender.clone();
+        let usb_trigger = usb_hotplug_event_loop(move || {
+            if !firmware_flashing_.load(Ordering::SeqCst) {
+                let _ = tx_udev.send(FirmwareEvent::Scan);
+            }
+        });
+
         receiver.attach(None, move |event| {
+            // Capture the USB trigger in the lifetime of the attached receiver.
+            let _ = usb_trigger;
+
             trace!("received UI event: {:#?}", Paint::yellow(&event));
             match event {
                 // When a device begins flashing, we can begin moving the progress bar based on
                 // its duration.
                 Firmware(DeviceFlashing(entity)) => {
+                    firmware_flashing.store(true, Ordering::SeqCst);
                     let widget = &state.components.device_widgets[entity];
                     let message =
                         if state.entities.is_system(entity) { "Scheduling" } else { "Flashing" };
@@ -222,6 +230,7 @@ impl FirmwareWidget {
                 }
                 // An event that occurs when firmware has successfully updated.
                 Firmware(DeviceUpdated(entity)) => {
+                    firmware_flashing.store(false, Ordering::SeqCst);
                     let latest = state.components.latest.remove(entity);
                     state.device_updated(entity, latest.expect("updated device without version"))
                 }
@@ -246,6 +255,7 @@ impl FirmwareWidget {
                 }
                 // An error occurred in the background thread, which we shall display in the UI.
                 Firmware(Error(entity, why)) => {
+                    firmware_flashing.store(false, Ordering::SeqCst);
                     // Convert the error and its causes into a string.
                     let mut error_message = format!("{}", why);
                     let mut cause = why.source();
