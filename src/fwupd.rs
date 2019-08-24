@@ -69,12 +69,15 @@ pub fn fwupd_updates(
     client: &FwupdClient,
     http: &reqwest::Client,
 ) -> Result<(), fwupd_dbus::Error> {
-    use std::time::Duration;
-
     const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
 
     if crate::timestamp::exceeded(SECONDS_IN_DAY).ok().unwrap_or(true) {
         info!("refreshing remotes");
+
+        if let Err(why) = crate::timestamp::refresh() {
+            error!("failed to update timestamp: {}", why);
+        }
+
         // NOTE: This attribute is required due to a clippy bug.
         #[allow(clippy::identity_conversion)]
         for remote in client.remotes()? {

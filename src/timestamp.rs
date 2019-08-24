@@ -30,6 +30,7 @@ pub fn last() -> Result<u64, Error> {
 
 /// Refreshes the timestamp in the cache.
 pub fn refresh() -> Result<(), Error> {
+    trace!("refreshing the timestamp file in cache");
     let path = &*timestamp_path()?;
 
     let parent = path.parent().expect("timestmap file does not have a parent directory");
