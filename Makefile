@@ -155,6 +155,7 @@ install: install-bin install-ffi install-notify install-icons
 install-bin:
 	install -Dm0755 "$(GTKBINARY)"  "$(DESTDIR)$(bindir)/$(APPID)"
 	install -Dm0644 "$(DESKTOP)" "$(DESTDIR)$(prefix)/share/applications/$(APPID).desktop"
+	install -Dm0644 "assets/$(APPID).appdata.xml" "$(DESTDIR)$(sharedir)/metainfo/$(APPID).appdata.xml"
 
 install-ffi:
 	install -Dm0644 "$(HEADER)"    "$(DESTDIR)$(includedir)/$(PACKAGE).h"
