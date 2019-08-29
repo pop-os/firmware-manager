@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2019 System76 <info@system76.com> -->
+<component type="desktop-application">
+    <id>com.system76.FirmwareManager</id>
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>GPL-3.0-or-later</project_license>
+    <developer_name>System76</developer_name>
+    <update_contact>info@system76.com</update_contact>
+    <url type="homepage">https://github.com/pop-os/firmware-manager</url>
+    <url type="bugtracker">https://github.com/pop-os/firmware-manager/issues</url>
+    <name>Firmware Manager</name>
+    <summary>GTK application for managing firmware updates</summary>
+    <description>
+        <p>
+            The Firmware Manager is a simple GTK application for managing firmware updates. It
+            sources information on available firmware updates from both fwupd and
+            system76-firmware, and then displays that information seamlessly in one interface.
+            Only devices which are managed by either service are displayed in the UI.
+        </p>
+        <p>
+            It is not required to have either fwupd or system76-firmware installed to use the
+            application. The application will only display devices which have been discovered
+            from services accessible on the system.
+        </p>
+        <p>
+            The application monitors USB hotplug events, and will refresh the firmware list when
+            USB devices are inserted or removed. A refresh button is also included in the UI to
+            manually reload the devices in the UI.
+        </p>
+    </description>
+    <categories>
+        <category>System</category>
+    </categories>
+    <screenshots>
+        <screenshot type="default">
+            <image>https://raw.githubusercontent.com/pop-os/firmware-manager/master/screenshots/gtk.png</image>
+        </screenshot>
+        <screenshot>
+            <image>https://raw.githubusercontent.com/pop-os/firmware-manager/master/screenshots/gnome-settings.png</image>
+        </screenshot>
+    </screenshots>
+    <launchable type="desktop-id">com.system76.FirmwareManager.desktop</launchable>
+</component>
