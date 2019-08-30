@@ -19,11 +19,11 @@ The application can be used to test that
     - [ ] A system with multiple Thelio I/O boards should only display one upgrade button
 - [ ] UI
     - [ ] An error callback should display errors in an info bar
-        - This can be achieved by removing the hardware and then attempting to upgrade it
-    - [ ] Pulsating progress bars should appear on devices being upgraded
+    - [ ] Progress bars should appear on devices being upgraded
     - [ ] On success, the firmware widget is displayed with the new version, and no button
     - [ ] On failure, an info bar details the cause of the error, and the button is shown again
     - [ ] Test that the refresh button works when new compatible devices are plugged in
+    - [ ] Test hotplugging (the UI should refresh when new compatible devices are plugged in).
 
 ### GNOME Settings Integration
 
