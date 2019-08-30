@@ -232,7 +232,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                         if let Err(why) = fwupd_updates(client, http_client) {
                             eprintln!("failed to update fwupd remotes: {}", why);
                         }
-                        fwupd_scan(client, sender);
+                        fwupd_scan(client, http_client, sender);
                     }
                 }
 

@@ -1,8 +1,11 @@
 //! Functions specific to working with fwupd firmware.
 
 use crate::{FirmwareInfo, FirmwareSignal};
-use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
-use std::{cmp::Ordering, error::Error as _, io, process::Command};
+use fwupd_dbus::{
+    Client as FwupdClient, Device as FwupdDevice, FlashEvent, Release as FwupdRelease,
+};
+use reqwest::Client as HttpClient;
+use std::cmp::Ordering;
 
 /// A signal sent when a fwupd-compatible device has been discovered.
 #[derive(Debug)]
@@ -18,7 +21,7 @@ pub struct FwupdSignal {
 }
 
 /// Scan for supported devices from the fwupd DBus daemon.
-pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
+pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, http: &HttpClient, sender: F) {
     info!("scanning fwupd devices");
 
     let devices = match fwupd.devices() {
@@ -36,7 +39,23 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
                     crate::sort_versions(&mut releases);
 
                     let latest = releases.iter().last().expect("no releases");
-                    let upgradeable = is_newer(&device.version, &latest.version);
+                    let mut upgradeable = is_newer(&device.version, &latest.version);
+
+                    if upgradeable {
+                        if let Err(why) = fwupd.fetch_firmware_from_release(
+                            http,
+                            &device,
+                            latest,
+                            None::<fn(FlashEvent)>,
+                        ) {
+                            error!(
+                                "failed to fetch firmware for {}: {}",
+                                device.name,
+                                crate::format_error(why)
+                            );
+                            upgradeable = false;
+                        }
+                    }
 
                     sender(FirmwareSignal::Fwupd(FwupdSignal {
                         info: FirmwareInfo {

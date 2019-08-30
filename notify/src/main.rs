@@ -67,7 +67,7 @@ fn main() {
                 eprintln!("failed to update fwupd remotes: {}", why);
             }
 
-            fwupd_scan(client, &event_handler);
+            fwupd_scan(client, http_client, &event_handler);
         }
     }
 }
