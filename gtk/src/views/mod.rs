@@ -1,6 +1,9 @@
 //! Views are entire sections of a UI in an application consisting of a collection of widgets.
 
 mod devices;
-mod empty;
+mod error;
 
-pub use self::{devices::DevicesView, empty::EmptyView};
+pub use self::{
+    devices::DevicesView,
+    error::{EmptyView, PermissionView},
+};

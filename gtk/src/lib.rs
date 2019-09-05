@@ -32,10 +32,15 @@ use std::{
     collections::HashSet,
     error::Error as _,
     process::Command,
-    sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc::{channel, Receiver, Sender, TryRecvError}},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{channel, Receiver, Sender, TryRecvError},
+        Arc,
+    },
     thread::{self, JoinHandle},
 };
 use stream_cancel::Trigger;
+use users::os::unix::GroupExt;
 use yansi::Paint;
 
 /// Activates, or deactivates, the movement of progress bars.
@@ -48,9 +53,10 @@ pub(crate) enum ActivateEvent {
 
 /// The complete firmware manager, as a widget structure
 pub struct FirmwareWidget {
-    container:   gtk::Container,
-    sender:      Sender<FirmwareEvent>,
-    background:  Option<JoinHandle<()>>,
+    container:  gtk::Container,
+    sender:     Sender<FirmwareEvent>,
+    background: Option<JoinHandle<()>>,
+    is_admin:   bool,
 }
 
 /// An event which the GTK UI may propagate to the event loop in the main context.
@@ -128,9 +134,19 @@ impl FirmwareWidget {
             gtk::Stack::new();
             ..add(view_empty.as_ref());
             ..add(view_devices.as_ref());
-            ..set_visible_child(view_empty.as_ref());
             ..set_no_show_all(true);
         };
+
+        let is_admin = user_is_admin();
+
+        if is_admin {
+            stack.set_visible_child(view_empty.as_ref());
+        } else {
+            let view = PermissionView::new();
+            stack.add(view.as_ref());
+            stack.set_visible_child(view.as_ref());
+            stack.show();
+        }
 
         let container = {
             let sender = sender.clone();
@@ -178,6 +194,7 @@ impl FirmwareWidget {
         Self {
             background: Some(background),
             container: container.upcast::<gtk::Container>(),
+            is_admin,
             sender,
         }
     }
@@ -187,7 +204,11 @@ impl FirmwareWidget {
     /// This clears any devices that have been previously discovered, and repopulates the
     /// devices view with new devices, if found. If devices are not found, the empty view
     /// will be displayed instead.
-    pub fn scan(&self) { let _ = self.sender.send(FirmwareEvent::Scan); }
+    pub fn scan(&self) {
+        if self.is_admin {
+            let _ = self.sender.send(FirmwareEvent::Scan);
+        }
+    }
 
     /// Returns the primary container widget of this structure.
     pub fn container(&self) -> &gtk::Container { self.container.upcast_ref::<gtk::Container>() }
@@ -419,6 +440,23 @@ impl Drop for FirmwareWidget {
             let _ = handle.join();
         }
     }
+}
+
+/// Check if the user is an administrator on this system.
+fn user_is_admin() -> bool {
+    users::get_current_username()
+        .map_or(false, |username| username == "root" || user_in_admin_group(&username))
+}
+
+/// Check if a user is in an administrative group, such as `adm` or `sudo`.
+fn user_in_admin_group(user: &std::ffi::OsStr) -> bool {
+    let in_group = |name| {
+        users::get_group_by_name(name).map_or(false, |group| {
+            group.members().into_iter().any(|member| member.as_os_str() == user)
+        })
+    };
+
+    in_group("adm") || in_group("sudo")
 }
 
 /// Convenience function for rebooting the system.
