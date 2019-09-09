@@ -37,9 +37,8 @@ fn main() {
 
     let event_handler = |event: FirmwareSignal| match event {
         #[cfg(feature = "fwupd")]
-        FirmwareSignal::Fwupd(FwupdSignal { info, .. }) => {
-            if info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())
-            {
+        FirmwareSignal::Fwupd(FwupdSignal { upgradeable, .. }) => {
+            if upgradeable {
                 notify();
             }
         }
