@@ -198,7 +198,7 @@ vendor:
 	mkdir -p .cargo
 	cargo vendor | head -n -1 > .cargo/config
 	echo 'directory = "vendor"' >> .cargo/config
-	tar cfJ vendor.tar vendor
+	tar cf vendor.tar vendor
 	rm -rf vendor
 
 vendor-check:
