@@ -18,6 +18,10 @@ use firmware_manager::{fwupd_scan, fwupd_updates, FwupdClient};
 use firmware_manager::{s76_firmware_is_active, s76_scan, System76Client};
 
 fn main() {
+    if !firmware_manager::user_is_admin() {
+        return;
+    }
+
     #[cfg(feature = "system76")]
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
 
