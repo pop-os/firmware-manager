@@ -15,12 +15,15 @@ extern crate shrinkwraprs;
 mod cache;
 mod timestamp;
 mod udev;
+mod users;
 mod version_sorting;
 
 #[cfg(feature = "fwupd")]
 mod fwupd;
 #[cfg(feature = "system76")]
 mod system76;
+
+pub use self::users::user_is_admin;
 
 #[cfg(feature = "fwupd")]
 pub use fwupd_dbus::{

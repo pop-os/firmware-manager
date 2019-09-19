@@ -39,8 +39,6 @@ use std::{
     },
     thread::{self, JoinHandle},
 };
-use stream_cancel::Trigger;
-use users::os::unix::GroupExt;
 use yansi::Paint;
 
 /// Activates, or deactivates, the movement of progress bars.
@@ -440,23 +438,6 @@ impl Drop for FirmwareWidget {
             let _ = handle.join();
         }
     }
-}
-
-/// Check if the user is an administrator on this system.
-fn user_is_admin() -> bool {
-    users::get_current_username()
-        .map_or(false, |username| username == "root" || user_in_admin_group(&username))
-}
-
-/// Check if a user is in an administrative group, such as `adm` or `sudo`.
-fn user_in_admin_group(user: &std::ffi::OsStr) -> bool {
-    let in_group = |name| {
-        users::get_group_by_name(name).map_or(false, |group| {
-            group.members().into_iter().any(|member| member.as_os_str() == user)
-        })
-    };
-
-    in_group("adm") || in_group("sudo")
 }
 
 /// Convenience function for rebooting the system.
