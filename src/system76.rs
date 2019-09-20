@@ -35,6 +35,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                 changelog.versions.iter().next().expect("empty changelog").bios.clone()
             }),
             install_duration: 1,
+            update_message: None,
         };
 
         sender(FirmwareSignal::S76System(fw, info));
@@ -69,6 +70,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
                     current,
                     latest,
                     install_duration: 15,
+                    update_message: None,
                 };
 
                 Some(FirmwareSignal::ThelioIo(fw, digest))
