@@ -110,6 +110,9 @@ pub struct FirmwareInfo {
 
     /// The time required for this firmware to be flashed, in seconds.
     pub install_duration: u32,
+
+    /// A message to display after successfully updating.
+    pub update_message: Option<Box<str>>,
 }
 
 /// A collection of all firmware device entities that a frontend is managing.
