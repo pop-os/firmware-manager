@@ -280,6 +280,7 @@ impl FirmwareWidget {
                         error!("firmware widget error: {}", error_message);
 
                         state.widgets.info_bar.set_visible(true);
+                        state.widgets.info_bar.set_message_type(gtk::MessageType::Error);
                         state.widgets.info_bar_label.set_text(error_message.as_str());
 
                         if let Some(entity) = entity {
