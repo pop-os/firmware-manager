@@ -1,3 +1,4 @@
+use textwrap::fill;
 use gtk::prelude::*;
 
 #[cfg(feature = "fwupd")]
@@ -31,7 +32,8 @@ impl FirmwareUpdateDialog {
         let mut header = ["Firmware version ", version, " is available."].concat();
 
         if has_battery {
-            header.push_str(" <b>Plug into power</b> before you begin.");
+            header.push_str(" Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.");
+            header = (&*fill(&header, 75)).to_string();
         }
 
         let changelog_container = cascade! {
