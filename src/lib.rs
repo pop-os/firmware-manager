@@ -67,16 +67,6 @@ pub enum Error {
     System76(#[error(cause)] System76Error),
 }
 
-#[cfg(feature = "fwupd")]
-impl From<fwupd_dbus::Error> for Error {
-    fn from(error: fwupd_dbus::Error) -> Self { Error::Fwupd(error) }
-}
-
-#[cfg(feature = "system76")]
-impl From<System76Error> for Error {
-    fn from(error: System76Error) -> Self { Error::System76(error) }
-}
-
 /// A request for the background event loop to perform.
 #[derive(Debug)]
 pub enum FirmwareEvent {
@@ -213,7 +203,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
     };
 
     #[cfg(feature = "fwupd")]
-    let http_client = &reqwest::Client::new();
+    let http_client = &reqwest::blocking::Client::new();
 
     while let Ok(event) = receiver.recv() {
         trace!("event loop received firmware event: {:?}", event);
@@ -309,15 +299,25 @@ fn read_trimmed(path: &str) -> io::Result<String> {
     Ok(vendor)
 }
 
-/// Convenience function for reading the board name from the DMI ID information.
-fn board_name() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/board_name") }
+/// Convenience function for reading the product name from the DMI ID information.
+fn product_name() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/product_name") }
 
-/// Convenience function for reading the board vendor from the DMI ID information.
-fn board_vendor() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/board_vendor") }
+/// Convenience function for reading the product version from the DMI ID information.
+fn product_version() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/product_version") }
+
+/// Convenience function for reading the system vendor from the DMI ID information.
+fn sys_vendor() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/sys_vendor") }
 
 /// Creates a string identifying system firmware by the board vendor and name.
 pub(crate) fn system_board_identity() -> io::Result<String> {
-    Ok([&*board_vendor()?, " ", &*board_name()?].concat())
+    Ok([
+        &*sys_vendor()?,
+        " ",
+        &*product_name()?,
+        " (",
+        &*product_version()?,
+        ")"
+    ].concat())
 }
 
 /// Generic function for attaining a DBus client connection to a firmware service.

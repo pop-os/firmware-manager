@@ -115,7 +115,7 @@ impl State {
             gtk::timeout_add_seconds(1, move || {
                 let _ = sender.send(Event::Ui(UiEvent::HideStack(entity)));
 
-                gtk::Continue(false)
+                glib::Continue(false)
             });
         }
     }

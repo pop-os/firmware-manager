@@ -38,7 +38,7 @@ where
         let parent = self.clone();
         gtk::idle_add(move || {
             parent.size_allocate(&mut parent.get_allocation());
-            gtk::Continue(false)
+            glib::Continue(false)
         });
     }
 }

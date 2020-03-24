@@ -12,11 +12,11 @@ pub enum Error {
     #[error(display = "cache error")]
     Cache(#[error(cause)] cache::Error),
     #[error(display = "failed to read last update file")]
-    Read(#[error(cause)] io::Error),
+    Read(#[error(cause, no_from)] io::Error),
     #[error(display = "failed to write timestamp")]
-    Write(#[error(cause)] io::Error),
+    Write(#[error(cause, no_from)] io::Error),
     #[error(display = "failed to create cache directory for timestamp file")]
-    Parent(#[error(cause)] io::Error),
+    Parent(#[error(cause, no_from)] io::Error),
 }
 
 /// Fetches the timestamp that is currently stored in the cache.

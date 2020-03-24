@@ -37,7 +37,7 @@ fn main() {
     );
 
     #[cfg(feature = "fwupd")]
-    let http_client = &reqwest::Client::new();
+    let http_client = &reqwest::blocking::Client::new();
 
     let event_handler = |event: FirmwareSignal| match event {
         #[cfg(feature = "fwupd")]

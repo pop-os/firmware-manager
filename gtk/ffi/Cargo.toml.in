@@ -9,6 +9,6 @@ name = "firmware_manager"
 crate-type = [ "cdylib" ]
 
 [dependencies]
-glib = "0.8"
-gtk-sys = "0.9"
-gtk = "0.7"
+glib = "0.9.3"
+gtk-sys = "0.9.2"
+gtk = "0.8.1"
