@@ -10,9 +10,9 @@ system76 = []
 fwupd = []
 
 [build-dependencies]
-markup = "0.3"
+markup = "0.4.1"
 
 [dependencies]
-err-derive = "0.1.5"
-notify-rust = "3.6.0"
-reqwest = "0.9.19"
+err-derive = "0.2.3"
+notify-rust = "3.6.3"
+reqwest = "0.10.4"

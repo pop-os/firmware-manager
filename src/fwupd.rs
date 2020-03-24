@@ -2,7 +2,7 @@
 
 use crate::{FirmwareInfo, FirmwareSignal};
 use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
-use std::{cmp::Ordering, error::Error as _, io, process::Command};
+use std::cmp::Ordering;
 
 /// A signal sent when a fwupd-compatible device has been discovered.
 #[derive(Debug)]
@@ -67,7 +67,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 /// Update the fwupd remotes
 pub fn fwupd_updates(
     client: &FwupdClient,
-    http: &reqwest::Client,
+    http: &reqwest::blocking::Client,
 ) -> Result<(), fwupd_dbus::Error> {
     const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
 

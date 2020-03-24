@@ -401,12 +401,12 @@ impl FirmwareWidget {
                     }
                     Ok(ActivateEvent::Clear) => {
                         active_widgets.clear();
-                        return gtk::Continue(true);
+                        return glib::Continue(true);
                     }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => {
                         trace!("disconnecting progress event loop");
-                        return gtk::Continue(false);
+                        return glib::Continue(false);
                     }
                 }
             }
@@ -420,7 +420,7 @@ impl FirmwareWidget {
                 widget.set_fraction(if new_value > 1.0 { 1.0 } else { new_value });
             }
 
-            gtk::Continue(true)
+            glib::Continue(true)
         });
     }
 }
