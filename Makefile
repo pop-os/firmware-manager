@@ -196,7 +196,12 @@ uninstall-ffi:
 vendor:
 	rm .cargo -rf
 	mkdir -p .cargo
-	cargo vendor | head -n -1 > .cargo/config
+	cargo vendor \
+		--sync gtk/Cargo.toml \
+		--sync gtk/ffi/Cargo.toml \
+		--sync notify/Cargo.toml \
+		--sync tools/Cargo.toml \
+		| head -n -1 > .cargo/config
 	echo 'directory = "vendor"' >> .cargo/config
 	tar cf vendor.tar vendor
 	rm -rf vendor
