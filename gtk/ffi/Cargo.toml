@@ -12,3 +12,4 @@ crate-type = [ "cdylib" ]
 glib = "0.9.3"
 gtk-sys = "0.9.2"
 gtk = "0.8.1"
+firmware-manager-gtk = { path = "../" }

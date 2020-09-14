@@ -155,7 +155,7 @@ let widget = firmware.container();
 The Rust library also supports C interface with FFI rules in the Makefile for gnerating a dynamic C library with `pkg-config` support. This is integrated in GNOME Settings on Pop!_OS.
 
 ```sh
-make ffi prefix=/usr features='system76 fwupd'
+make ffi prefix=/usr
 sudo make install-ffi prefix=/usr
 ```
 

@@ -1,16 +1,10 @@
 use textwrap::fill;
 use gtk::prelude::*;
 
-#[cfg(feature = "fwupd")]
 mod fwupd;
-
-#[cfg(feature = "system76")]
 mod system76;
 
-#[cfg(feature = "fwupd")]
 pub use self::fwupd::FwupdDialog;
-
-#[cfg(feature = "system76")]
 pub use self::system76::System76Dialog;
 
 /// A generic GTK dialog which is displayed for firmware which requires a system reboot.

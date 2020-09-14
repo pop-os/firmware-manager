@@ -1,5 +1,4 @@
 use firmware_manager::{get_client, FirmwareSignal};
-#[cfg(feature = "fwupd")]
 use firmware_manager::{FwupdError, FwupdSignal};
 use notify_rust::{Notification, Timeout};
 use std::{
@@ -11,10 +10,7 @@ const UPDATES_FOUND: i32 = 3;
 
 const GNOME_CONTROL_CENTER: &str = "/usr/share/applications/gnome-firmware-panel.desktop";
 
-#[cfg(feature = "fwupd")]
 use firmware_manager::{fwupd_scan, fwupd_updates, FwupdClient};
-
-#[cfg(feature = "system76")]
 use firmware_manager::{s76_firmware_is_active, s76_scan, System76Client};
 
 fn main() {
@@ -22,10 +18,8 @@ fn main() {
         return;
     }
 
-    #[cfg(feature = "system76")]
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
 
-    #[cfg(feature = "fwupd")]
     let fwupd = get_client::<_, _, FwupdError>(
         "fwupd",
         || true,
@@ -36,17 +30,14 @@ fn main() {
         },
     );
 
-    #[cfg(feature = "fwupd")]
     let http_client = &reqwest::blocking::Client::new();
 
     let event_handler = |event: FirmwareSignal| match event {
-        #[cfg(feature = "fwupd")]
         FirmwareSignal::Fwupd(FwupdSignal { upgradeable, .. }) => {
             if upgradeable {
                 notify();
             }
         }
-        #[cfg(feature = "system76")]
         FirmwareSignal::S76System(info, ..) | FirmwareSignal::ThelioIo(info, ..) => {
             if info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())
             {
@@ -56,22 +47,16 @@ fn main() {
         _ => (),
     };
 
-    #[cfg(feature = "system76")]
-    {
-        if let Some(ref client) = s76 {
-            s76_scan(client, &event_handler);
-        }
+    if let Some(ref client) = s76 {
+        s76_scan(client, &event_handler);
     }
 
-    #[cfg(feature = "fwupd")]
-    {
-        if let Some(ref client) = fwupd {
-            if let Err(why) = fwupd_updates(client, http_client) {
-                eprintln!("failed to update fwupd remotes: {}", why);
-            }
-
-            fwupd_scan(client, &event_handler);
+    if let Some(ref client) = fwupd {
+        if let Err(why) = fwupd_updates(client, http_client) {
+            eprintln!("failed to update fwupd remotes: {}", why);
         }
+
+        fwupd_scan(client, &event_handler);
     }
 }
 

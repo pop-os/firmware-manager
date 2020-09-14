@@ -7,18 +7,13 @@ edition = "2018"
 [workspace]
 members = [ "gtk", "gtk/ffi", "notify", "tools" ]
 
-[features]
-default = [ "fwupd", "system76" ]
-fwupd = [ "fwupd-dbus" ]
-system76 = [ "system76-firmware-daemon" ]
-
 [build-dependencies]
 markup = "0.4.1"
 
 [dependencies]
 err-derive = "0.2.3"
-fwupd-dbus = { version = "0.1.1", optional = true }
-system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware", optional = true }
+fwupd-dbus = { version = "0.1.1" }
+system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware" }
 slotmap = "0.4.0"
 reqwest = "0.10.4"
 human-sort = "0.2.2"

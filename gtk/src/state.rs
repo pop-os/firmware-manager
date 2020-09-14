@@ -50,15 +50,12 @@ pub(crate) struct Components {
     pub(crate) latest: SecondaryMap<Entity, Box<str>>,
 
     /// Details about a fwupd device
-    #[cfg(feature = "fwupd")]
     pub(crate) fwupd: SparseSecondaryMap<Entity, (FwupdDevice, Vec<FwupdRelease>)>,
 
     /// Details about system76 system firmware.
-    #[cfg(feature = "system76")]
     pub(crate) system76: SparseSecondaryMap<Entity, (System76Digest, System76Changelog)>,
 
     /// Details about thelio I/O firmware
-    #[cfg(feature = "system76")]
     pub(crate) thelio: SparseSecondaryMap<Entity, System76Digest>,
 }
 
@@ -121,7 +118,6 @@ impl State {
     }
 
     /// An event that occurs when fwupd firmware is found.
-    #[cfg(feature = "fwupd")]
     pub fn fwupd(&mut self, signal: FwupdSignal) {
         self.create_device(move |state, entity| {
             let FwupdSignal { info, device, upgradeable, releases } = signal;
@@ -174,39 +170,33 @@ impl State {
         let revealer = &widget.revealer;
         let sender = &self.ui_sender;
 
-        #[cfg(feature = "fwupd")]
-        {
-            if let Some((_, releases)) = self.components.fwupd.get(entity) {
-                reveal(revealer, sender, entity, move || {
-                    let releases = &releases;
-                    let log_entries = releases
-                        .iter()
-                        .rev()
-                        .map(|release| (release.version.as_ref(), release.description.as_ref()));
+        if let Some((_, releases)) = self.components.fwupd.get(entity) {
+            reveal(revealer, sender, entity, move || {
+                let releases = &releases;
+                let log_entries = releases
+                    .iter()
+                    .rev()
+                    .map(|release| (release.version.as_ref(), release.description.as_ref()));
 
-                    crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
-                });
+                crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+            });
 
-                return;
-            }
+            return;
         }
 
-        #[cfg(feature = "system76")]
-        {
-            if let Some((_, changelog)) = self.components.system76.get(entity) {
-                reveal(revealer, &sender, entity, || {
-                    let log_entries = changelog.versions.iter().map(|version| {
-                        (
-                            version.bios.as_ref(),
-                            version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
-                        )
-                    });
-
-                    crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+        if let Some((_, changelog)) = self.components.system76.get(entity) {
+            reveal(revealer, &sender, entity, || {
+                let log_entries = changelog.versions.iter().map(|version| {
+                    (
+                        version.bios.as_ref(),
+                        version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
+                    )
                 });
 
-                return;
-            }
+                crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
+            });
+
+            return;
         }
 
         // When changelog information is not available.
@@ -216,7 +206,6 @@ impl State {
     }
 
     /// An event that occurs when System76 system firmware has been found.
-    #[cfg(feature = "system76")]
     pub fn system76_system(
         &mut self,
         info: FirmwareInfo,
@@ -252,7 +241,6 @@ impl State {
     }
 
     /// An event that occurs when a Thelio I/O board was discovered.
-    #[cfg(feature = "system76")]
     pub fn thelio_io(&mut self, info: FirmwareInfo, digest: Option<System76Digest>) {
         self.create_device(move |state, entity| {
             let widget = state.widgets.view_devices.device(&info);
@@ -293,46 +281,40 @@ impl State {
         if let Some(latest) = self.components.latest.get(entity) {
             let widgets = &self.components.device_widgets[entity];
 
-            #[cfg(feature = "fwupd")]
-            {
-                if let Some((device, releases)) = self.components.fwupd.get(entity) {
-                    let dialog = FwupdDialog {
-                        device: &device,
-                        entity,
-                        has_battery: self.has_battery,
-                        latest: &latest,
-                        needs_reboot: self.entities.is_system(entity),
-                        releases: &releases,
-                        sender: &self.sender,
-                        widgets,
-                    };
+            if let Some((device, releases)) = self.components.fwupd.get(entity) {
+                let dialog = FwupdDialog {
+                    device: &device,
+                    entity,
+                    has_battery: self.has_battery,
+                    latest: &latest,
+                    needs_reboot: self.entities.is_system(entity),
+                    releases: &releases,
+                    sender: &self.sender,
+                    widgets,
+                };
 
-                    dialog.run();
+                dialog.run();
 
-                    return;
-                }
+                return;
             }
 
-            #[cfg(feature = "system76")]
-            {
-                if let Some((digest, changelog)) = self.components.system76.get(entity) {
-                    let dialog = System76Dialog {
-                        changelog: &changelog,
-                        digest: &digest,
-                        entity,
-                        has_battery: self.has_battery,
-                        latest: &latest,
-                        sender: &self.sender,
-                        widgets,
-                    };
+            if let Some((digest, changelog)) = self.components.system76.get(entity) {
+                let dialog = System76Dialog {
+                    changelog: &changelog,
+                    digest: &digest,
+                    entity,
+                    has_battery: self.has_battery,
+                    latest: &latest,
+                    sender: &self.sender,
+                    widgets,
+                };
 
-                    dialog.run();
-                } else if let Some(digest) = self.components.thelio.get(entity) {
-                    // Exchange the button for a progress bar.
-                    widgets.stack.switch_to_waiting();
-                    self.progress_activate(&widgets.stack.progress);
-                    let _ = self.sender.send(FirmwareEvent::ThelioIo(entity, digest.clone()));
-                }
+                dialog.run();
+            } else if let Some(digest) = self.components.thelio.get(entity) {
+                // Exchange the button for a progress bar.
+                widgets.stack.switch_to_waiting();
+                self.progress_activate(&widgets.stack.progress);
+                let _ = self.sender.send(FirmwareEvent::ThelioIo(entity, digest.clone()));
             }
         } else {
             error!("attempted to update firmware for a device which did not have updated firmware");
