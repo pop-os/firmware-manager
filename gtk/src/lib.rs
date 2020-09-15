@@ -26,6 +26,7 @@ mod widgets;
 
 use self::{state::State, views::*};
 use firmware_manager::*;
+use flume::TryRecvError;
 use gtk::{self, prelude::*};
 use slotmap::DefaultKey as Entity;
 use std::{
@@ -34,7 +35,6 @@ use std::{
     process::Command,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{channel, Receiver, Sender, TryRecvError},
         Arc,
     },
     thread::{self, JoinHandle},
@@ -52,7 +52,7 @@ pub(crate) enum ActivateEvent {
 /// The complete firmware manager, as a widget structure
 pub struct FirmwareWidget {
     container:  gtk::Container,
-    sender:     Sender<FirmwareEvent>,
+    sender:     flume::Sender<FirmwareEvent>,
     background: Option<JoinHandle<()>>,
     is_admin:   bool,
 }
@@ -89,7 +89,7 @@ impl FirmwareWidget {
     /// - This will spawn a background thread to handle non-UI events.
     /// - On drop, the background thread will exit
     pub fn new() -> Self {
-        let (sender, rx) = channel();
+        let (sender, rx) = flume::unbounded();
 
         let view_devices = DevicesView::new();
         let view_empty = EmptyView::new();
@@ -162,8 +162,8 @@ impl FirmwareWidget {
 
         info_bar.hide();
 
-        let (tx_progress, rx_progress) = channel();
-        let (tx_events, rx_events) = glib::MainContext::channel::<Event>(glib::PRIORITY_DEFAULT);
+        let (tx_progress, rx_progress) = flume::unbounded();
+        let (tx_events, rx_events) = flume::unbounded::<Event>();
 
         // Spawns a background thread to handle all background events.
         let background = Self::background(rx, tx_events.clone());
@@ -209,7 +209,7 @@ impl FirmwareWidget {
     /// Manages all `FirmwareSignal` events received on the receiver from the background thread.
     /// The `State` input is captured by the receiver's move closure, and therefore retains its
     /// state between executions of the receiver's event loop.
-    fn attach_main_event_loop(mut state: State, receiver: glib::Receiver<Event>) {
+    fn attach_main_event_loop(mut state: State, receiver: flume::Receiver<Event>) {
         use crate::{Event::*, FirmwareSignal::*, UiEvent::*};
         let mut last_active_revealer = None;
 
@@ -223,141 +223,141 @@ impl FirmwareWidget {
             }
         });
 
-        receiver.attach(None, move |event| {
+        glib::MainContext::default().spawn_local(async move {
             // Capture the USB trigger in the lifetime of the attached receiver.
             let _ = usb_trigger;
 
-            trace!("received UI event: {:#?}", Paint::yellow(&event));
-            match event {
-                // When a device begins flashing, we can begin moving the progress bar based on
-                // its duration.
-                Firmware(DeviceFlashing(entity)) => {
-                    firmware_flashing.store(true, Ordering::SeqCst);
-                    let widget = &state.components.device_widgets[entity];
-                    let message =
-                        if state.entities.is_system(entity) { "Scheduling" } else { "Flashing" };
-
-                    widget.stack.switch_to_progress(message);
-                    state.progress_activate(&widget.stack.progress);
-                }
-                // An event that occurs when firmware has successfully updated.
-                Firmware(DeviceUpdated(entity)) => {
-                    firmware_flashing.store(false, Ordering::SeqCst);
-                    let latest = state.components.latest.remove(entity);
-                    state.device_updated(entity, latest.expect("updated device without version"))
-                }
-                // Firmware for a device has begun downloading.
-                Firmware(DownloadBegin(entity, size)) => {
-                    let widget = &state.components.device_widgets[entity];
-                    state.components.firmware_download.insert(entity, (0, size));
-                    widget.stack.switch_to_progress("Downloading");
-                }
-                // Firmware for a device has finished downloading.
-                Firmware(DownloadComplete(entity)) => {
-                    state.components.firmware_download.remove(entity);
-                    let widget = &state.components.device_widgets[entity];
-                    widget.stack.progress.set_fraction(1.0);
-                }
-                // Update the progress for the firmware being downloaded.
-                Firmware(DownloadUpdate(entity, downloaded)) => {
-                    let widget = &state.components.device_widgets[entity];
-                    let progress = &mut state.components.firmware_download[entity];
-                    progress.0 += downloaded as u64;
-                    widget.stack.progress.set_fraction(progress.0 as f64 / progress.1 as f64);
-                }
-                // An error occurred in the background thread, which we shall display in the UI.
-                Firmware(Error(entity, why)) => {
-                    firmware_flashing.store(false, Ordering::SeqCst);
-                    // Convert the error and its causes into a string.
-                    let mut error_message = format!("{}", why);
-                    let mut cause = why.source();
-                    while let Some(error) = cause {
-                        error_message.push_str(format!(": {}", error).as_str());
-                        cause = error.source();
-                    }
-
-                    error!("firmware widget error: {}", error_message);
-
-                    state.widgets.info_bar.set_visible(true);
-                    state.widgets.info_bar_label.set_text(error_message.as_str());
-
-                    if let Some(entity) = entity {
+            while let Ok(event) = receiver.recv_async().await {
+                trace!("received UI event: {:#?}", Paint::yellow(&event));
+                match event {
+                    // When a device begins flashing, we can begin moving the progress bar based on
+                    // its duration.
+                    Firmware(DeviceFlashing(entity)) => {
+                        firmware_flashing.store(true, Ordering::SeqCst);
                         let widget = &state.components.device_widgets[entity];
-                        widget.stack.set_visible_child(&widget.stack.button);
+                        let message =
+                            if state.entities.is_system(entity) { "Scheduling" } else { "Flashing" };
+
+                        widget.stack.switch_to_progress(message);
+                        state.progress_activate(&widget.stack.progress);
+                    }
+                    // An event that occurs when firmware has successfully updated.
+                    Firmware(DeviceUpdated(entity)) => {
+                        firmware_flashing.store(false, Ordering::SeqCst);
+                        let latest = state.components.latest.remove(entity);
+                        state.device_updated(entity, latest.expect("updated device without version"))
+                    }
+                    // Firmware for a device has begun downloading.
+                    Firmware(DownloadBegin(entity, size)) => {
+                        let widget = &state.components.device_widgets[entity];
+                        state.components.firmware_download.insert(entity, (0, size));
+                        widget.stack.switch_to_progress("Downloading");
+                    }
+                    // Firmware for a device has finished downloading.
+                    Firmware(DownloadComplete(entity)) => {
                         state.components.firmware_download.remove(entity);
-                        state.progress_deactivate(&widget.stack.progress);
+                        let widget = &state.components.device_widgets[entity];
+                        widget.stack.progress.set_fraction(1.0);
                     }
-                }
-                // An event that occurs when fwupd firmware is found.
-                Firmware(Fwupd(signal)) => state.fwupd(signal),
-                // Begins searching for devices that have firmware upgrade support
-                Firmware(Scanning) => {
-                    state.widgets.view_devices.clear();
-                    last_active_revealer = None;
-                    state.entities.clear();
-
-                    let _ = state.progress_sender.send(ActivateEvent::Clear);
-
-                    state.widgets.stack.hide();
-                    state.widgets.view_devices.hide_systems();
-                    state.widgets.view_devices.hide_devices();
-                }
-                // Signal is received when scanning has completed.
-                Firmware(ScanningComplete) => {
-                    info!("scanning for firmware is complete");
-                    if state.entities.entities.is_empty() {
-                        state.widgets.stack.show();
-                        state.widgets.view_empty.show_all();
-                        state.widgets.stack.set_visible_child(state.widgets.view_empty.as_ref());
+                    // Update the progress for the firmware being downloaded.
+                    Firmware(DownloadUpdate(entity, downloaded)) => {
+                        let widget = &state.components.device_widgets[entity];
+                        let progress = &mut state.components.firmware_download[entity];
+                        progress.0 += downloaded as u64;
+                        widget.stack.progress.set_fraction(progress.0 as f64 / progress.1 as f64);
                     }
-                }
-                // When system firmwmare is successfully scheduled, reboot the system.
-                Firmware(SystemScheduled) => reboot(),
-                // An event that occurs when System76 system firmware has been found.
-                Firmware(S76System(info, data)) => state.system76_system(info, data),
-                // An event that occurs when a Thelio I/O board was discovered.
-                Firmware(ThelioIo(info, digest)) => state.thelio_io(info, digest),
-                // Schedules the given firmware for an update, and show a dialog if it requires a
-                // reboot.
-                Ui(Update(entity)) => state.update(entity),
-                // Hides the entity's stack.
-                Ui(HideStack(entity)) => {
-                    if let Some(widget) = state.components.device_widgets.get(entity) {
-                        widget.stack.hide();
-                    }
-                }
-                // Reveals a widget's changelog in a revealer, and generate that changelog if it has
-                // not been revealed yet.
-                Ui(Reveal(entity)) => state.reveal(entity),
-                // Signals that an entity's revealer has been revealed, and so we should hide the
-                // last-active revealer.
-                Ui(Revealed(entity, revealed)) => {
-                    if revealed {
-                        if let Some(previous) = last_active_revealer {
-                            let widgets = &state.components.device_widgets[previous];
-                            widgets.revealer.set_reveal_child(false);
+                    // An error occurred in the background thread, which we shall display in the UI.
+                    Firmware(Error(entity, why)) => {
+                        firmware_flashing.store(false, Ordering::SeqCst);
+                        // Convert the error and its causes into a string.
+                        let mut error_message = format!("{}", why);
+                        let mut cause = why.source();
+                        while let Some(error) = cause {
+                            error_message.push_str(format!(": {}", error).as_str());
+                            cause = error.source();
                         }
 
-                        last_active_revealer = Some(entity);
-                    } else {
+                        error!("firmware widget error: {}", error_message);
+
+                        state.widgets.info_bar.set_visible(true);
+                        state.widgets.info_bar_label.set_text(error_message.as_str());
+
+                        if let Some(entity) = entity {
+                            let widget = &state.components.device_widgets[entity];
+                            widget.stack.set_visible_child(&widget.stack.button);
+                            state.components.firmware_download.remove(entity);
+                            state.progress_deactivate(&widget.stack.progress);
+                        }
+                    }
+                    // An event that occurs when fwupd firmware is found.
+                    Firmware(Fwupd(signal)) => state.fwupd(signal),
+                    // Begins searching for devices that have firmware upgrade support
+                    Firmware(Scanning) => {
+                        state.widgets.view_devices.clear();
                         last_active_revealer = None;
+                        state.entities.clear();
+
+                        let _ = state.progress_sender.send(ActivateEvent::Clear);
+
+                        state.widgets.stack.hide();
+                        state.widgets.view_devices.hide_systems();
+                        state.widgets.view_devices.hide_devices();
+                    }
+                    // Signal is received when scanning has completed.
+                    Firmware(ScanningComplete) => {
+                        info!("scanning for firmware is complete");
+                        if state.entities.entities.is_empty() {
+                            state.widgets.stack.show();
+                            state.widgets.view_empty.show_all();
+                            state.widgets.stack.set_visible_child(state.widgets.view_empty.as_ref());
+                        }
+                    }
+                    // When system firmwmare is successfully scheduled, reboot the system.
+                    Firmware(SystemScheduled) => reboot(),
+                    // An event that occurs when System76 system firmware has been found.
+                    Firmware(S76System(info, data)) => state.system76_system(info, data),
+                    // An event that occurs when a Thelio I/O board was discovered.
+                    Firmware(ThelioIo(info, digest)) => state.thelio_io(info, digest),
+                    // Schedules the given firmware for an update, and show a dialog if it requires a
+                    // reboot.
+                    Ui(Update(entity)) => state.update(entity),
+                    // Hides the entity's stack.
+                    Ui(HideStack(entity)) => {
+                        if let Some(widget) = state.components.device_widgets.get(entity) {
+                            widget.stack.hide();
+                        }
+                    }
+                    // Reveals a widget's changelog in a revealer, and generate that changelog if it has
+                    // not been revealed yet.
+                    Ui(Reveal(entity)) => state.reveal(entity),
+                    // Signals that an entity's revealer has been revealed, and so we should hide the
+                    // last-active revealer.
+                    Ui(Revealed(entity, revealed)) => {
+                        if revealed {
+                            if let Some(previous) = last_active_revealer {
+                                let widgets = &state.components.device_widgets[previous];
+                                widgets.revealer.set_reveal_child(false);
+                            }
+
+                            last_active_revealer = Some(entity);
+                        } else {
+                            last_active_revealer = None;
+                        }
+                    }
+                    // This is the last message sent before the background thread exits.
+                    Stop => {
+                        trace!("glib channel receiver closed");
+                        continue
                     }
                 }
-                // This is the last message sent before the background thread exits.
-                Stop => {
-                    trace!("glib channel receiver closed");
-                    return glib::Continue(false);
-                }
             }
-
-            glib::Continue(true)
         });
     }
 
     /// Manages all firmware client interactions from a background thread.
     fn background(
-        receiver: Receiver<FirmwareEvent>,
-        sender: glib::Sender<Event>,
+        receiver: flume::Receiver<FirmwareEvent>,
+        sender: flume::Sender<Event>,
     ) -> JoinHandle<()> {
         thread::spawn(move || {
             firmware_manager::event_loop(receiver, |event| {
@@ -377,9 +377,10 @@ impl FirmwareWidget {
     /// the amount of time that is required to flash the device.
     ///
     /// On completion, devices will be removed from this signal.
-    fn connect_progress_events(rx_progress: Receiver<ActivateEvent>) {
+    fn connect_progress_events(rx_progress: flume::Receiver<ActivateEvent>) {
         let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
         let mut remove = Vec::new();
+        
         glib::timeout_add_local(100, move || {
             loop {
                 match rx_progress.try_recv() {

@@ -44,8 +44,10 @@ use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
     io,
     process::Command,
-    sync::{mpsc::Receiver, Arc},
+    sync::Arc,
 };
+
+use flume::Receiver;
 
 /// Errors that may occur in the firmware manager core.
 #[derive(Debug, Error)]

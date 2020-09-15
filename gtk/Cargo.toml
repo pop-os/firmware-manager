@@ -22,3 +22,4 @@ clap = "2.33"
 yansi = "0.5"
 textwrap = "0.12"
 firmware-manager = { path = "../" }
+flume = "0.9.0"

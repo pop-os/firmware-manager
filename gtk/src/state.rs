@@ -3,7 +3,6 @@ use firmware_manager::*;
 
 use gtk::prelude::*;
 use slotmap::{DefaultKey as Entity, SecondaryMap, SparseSecondaryMap};
-use std::sync::mpsc::Sender;
 
 /// Manages all state and state interactions with the UI.
 pub(crate) struct State {
@@ -14,11 +13,11 @@ pub(crate) struct State {
     /// If this system has a battery.
     pub(crate) has_battery: bool,
     /// Sends events to the progress signal
-    pub(crate) progress_sender: Sender<ActivateEvent>,
+    pub(crate) progress_sender: flume::Sender<ActivateEvent>,
     /// A sender to send firmware requests to the background thread
-    pub(crate) sender: Sender<FirmwareEvent>,
+    pub(crate) sender: flume::Sender<FirmwareEvent>,
     /// Events to be processed by the main event loop
-    pub(crate) ui_sender: glib::Sender<Event>,
+    pub(crate) ui_sender: flume::Sender<Event>,
     /// Widgets that will be actively managed.
     pub(crate) widgets: Widgets,
 }
@@ -64,9 +63,9 @@ impl State {
     /// context.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        sender: Sender<FirmwareEvent>,
-        ui_sender: glib::Sender<Event>,
-        progress_sender: Sender<ActivateEvent>,
+        sender: flume::Sender<FirmwareEvent>,
+        ui_sender: flume::Sender<Event>,
+        progress_sender: flume::Sender<ActivateEvent>,
         stack: gtk::Stack,
         info_bar: gtk::InfoBar,
         info_bar_label: gtk::Label,
@@ -325,7 +324,7 @@ impl State {
 /// Reveals a device's changelog, and generates that changelog if it hasn't been generated yet.
 fn reveal<F: FnMut() -> gtk::Container>(
     revealer: &gtk::Revealer,
-    sender: &glib::Sender<Event>,
+    sender: &flume::Sender<Event>,
     entity: Entity,
     mut func: F,
 ) {

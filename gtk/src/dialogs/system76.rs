@@ -1,8 +1,9 @@
 use super::FirmwareUpdateDialog;
 use crate::widgets::DeviceWidget;
 use firmware_manager::{Entity, FirmwareEvent, System76Changelog, System76Digest};
+use flume::Sender;
 use gtk::prelude::*;
-use std::sync::mpsc::Sender;
+
 
 /// An instance of the firmware update dialog specific to system76-managed system devices.
 pub struct System76Dialog<'a> {

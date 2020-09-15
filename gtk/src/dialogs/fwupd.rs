@@ -1,8 +1,9 @@
 use super::FirmwareUpdateDialog;
 use crate::widgets::DeviceWidget;
 use firmware_manager::{Entity, FirmwareEvent, FwupdDevice, FwupdRelease};
+use flume::Sender;
 use gtk::prelude::*;
-use std::sync::{mpsc::Sender, Arc};
+use std::sync::Arc;
 
 /// An instance of the firmware update dialog specific to fwupd-managed system devices.
 pub struct FwupdDialog<'a> {
@@ -32,7 +33,7 @@ impl<'a> FwupdDialog<'a> {
             unsafe {
                 dialog.destroy();
             }
-            
+
             response
         } else {
             gtk::ResponseType::Accept
