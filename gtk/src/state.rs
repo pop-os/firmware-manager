@@ -109,7 +109,7 @@ impl State {
 
             // Wait 1 second before changing the visibility of the stack.
             let sender = self.ui_sender.clone();
-            gtk::timeout_add_seconds(1, move || {
+            glib::timeout_add_seconds(1, move || {
                 let _ = sender.send(Event::Ui(UiEvent::HideStack(entity)));
 
                 glib::Continue(false)

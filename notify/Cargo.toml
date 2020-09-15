@@ -4,16 +4,11 @@ version = "0.1.0"
 authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
 edition = "2018"
 
-[features]
-default = [ "fwupd", "system76" ]
-system76 = []
-fwupd = []
-
 [build-dependencies]
 markup = "0.4.1"
 
 [dependencies]
-err-derive = "0.2.3"
-notify-rust = "3.6.3"
-reqwest = "0.10.4"
+err-derive = "0.2"
+notify-rust = "4.0"
+reqwest = "0.10"
 firmware-manager = { path = "../" }

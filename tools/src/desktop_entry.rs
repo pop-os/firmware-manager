@@ -5,7 +5,7 @@ use freedesktop_desktop_entry::{Application, DesktopEntry, DesktopType};
 use std::{
     fs::File,
     io::{self, Write},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 fn main() {
@@ -55,7 +55,7 @@ fn write_desktop_entry(matches: &ArgMatches) -> io::Result<()> {
             let mut app = Application::new(&categories, exec);
 
             if let Some(ref keywords) = keywords {
-                app = app.keywords((keywords));
+                app = app.keywords(keywords);
             }
 
             if matches.is_present("startup-notify") {

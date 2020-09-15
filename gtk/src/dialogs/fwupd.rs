@@ -28,7 +28,11 @@ impl<'a> FwupdDialog<'a> {
             let dialog = FirmwareUpdateDialog::new(self.latest, log_entries, self.has_battery);
 
             let response = dialog.run();
-            dialog.destroy();
+
+            unsafe {
+                dialog.destroy();
+            }
+            
             response
         } else {
             gtk::ResponseType::Accept

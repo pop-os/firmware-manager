@@ -31,6 +31,8 @@ impl<'a> System76Dialog<'a> {
             let _ = self.sender.send(event);
         }
 
-        dialog.destroy();
+        unsafe {
+            dialog.destroy();
+        }
     }
 }

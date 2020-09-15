@@ -119,11 +119,7 @@ impl FirmwareWidget {
             ..set_no_show_all(true);
         };
 
-        if let Some(area) = info_bar.get_content_area() {
-            if let Ok(area) = area.downcast::<gtk::Container>() {
-                area.add(&info_bar_label);
-            }
-        }
+        info_bar.get_content_area().add(&info_bar_label);
 
         let stack = cascade! {
             gtk::Stack::new();
@@ -151,7 +147,7 @@ impl FirmwareWidget {
                 ..add(&stack);
                 ..set_can_default(true);
                 ..connect_key_press_event(move |_, event| {
-                    gtk::Inhibit(if event.get_keyval() == gdk::enums::key::F5 {
+                    gtk::Inhibit(if event.get_keyval() == gdk::keys::constants::F5 {
                         let _ = sender.send(FirmwareEvent::Scan);
                         true
                     } else {
@@ -384,7 +380,7 @@ impl FirmwareWidget {
     fn connect_progress_events(rx_progress: Receiver<ActivateEvent>) {
         let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
         let mut remove = Vec::new();
-        gtk::timeout_add(100, move || {
+        glib::timeout_add_local(100, move || {
             loop {
                 match rx_progress.try_recv() {
                     Ok(ActivateEvent::Activate(widget)) => {

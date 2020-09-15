@@ -54,7 +54,7 @@ impl DevicesView {
             });
             ..connect_key_press_event(move |listbox, event| {
                 gtk::Inhibit(
-                    if event.get_keyval() == gdk::enums::key::Up {
+                    if event.get_keyval() == gdk::keys::constants::Up {
                         listbox.get_children()
                             .into_iter()
                             .filter_map(|widget| widget.downcast::<gtk::ListBoxRow>().ok())
@@ -74,7 +74,7 @@ impl DevicesView {
 
         let lower = device_firmware.downgrade();
         system_firmware.connect_key_press_event(move |listbox, event| {
-            gtk::Inhibit(if event.get_keyval() == gdk::enums::key::Down {
+            gtk::Inhibit(if event.get_keyval() == gdk::keys::constants::Down {
                 listbox
                     .get_children()
                     .into_iter()
@@ -145,8 +145,8 @@ impl DevicesView {
 
     /// Clears all device widgets from the system and device list boxes.
     pub fn clear(&self) {
-        self.system_firmware.foreach(WidgetExt::destroy);
-        self.device_firmware.foreach(WidgetExt::destroy);
+        self.system_firmware.foreach(|w| self.system_firmware.remove(w));
+        self.device_firmware.foreach(|w| self.device_firmware.remove(w));
     }
 
     /// Creates and attaches a new device widget to the device section.
