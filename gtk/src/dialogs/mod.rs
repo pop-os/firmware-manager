@@ -1,4 +1,3 @@
-use textwrap::fill;
 use gtk::prelude::*;
 
 #[cfg(feature = "fwupd")]
@@ -32,14 +31,23 @@ impl FirmwareUpdateDialog {
         let mut header = ["Firmware version ", version, " is available."].concat();
 
         if has_battery {
-            header.push_str(" Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.");
-            header = (&*fill(&header, 75)).to_string();
+            header.push_str(
+                " Connect your computer to power. <b>USB Type-C</b> charging is not \
+                supported for firmware updates.",
+            );
         }
+
+        header.push_str(
+            " After the system powers off, press the \
+            power button to turn it back on. It may be necessary to power on more \
+            than once after a firmware update. On machines running Open Firmware, \
+            the system should then boot normally.",
+        );
 
         let changelog_container = cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_vexpand(true);
-            ..add(&gtk::LabelBuilder::new().label(&*header).xalign(0.0).use_markup(true).build());
+            ..add(&gtk::LabelBuilder::new().label(&*header).wrap(true).xalign(0.0).use_markup(true).build());
             ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
             ..add(&changelog_entries);
             ..show_all();
