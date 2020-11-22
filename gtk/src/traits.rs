@@ -36,7 +36,7 @@ where
         // The first invocation of size_allocate will fail, because it has not been realized
         // yet, so this will ensure that we get the correct value after init.
         let parent = self.clone();
-        gtk::idle_add(move || {
+        glib::idle_add_local(move || {
             parent.size_allocate(&mut parent.get_allocation());
             glib::Continue(false)
         });
