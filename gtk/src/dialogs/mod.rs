@@ -45,7 +45,7 @@ impl FirmwareUpdateDialog {
             ..show_all();
         };
 
-        let cancel = gtk::Button::new_with_label("Cancel");
+        let cancel = gtk::Button::with_label("Cancel");
 
         let reboot = cascade! {
             gtk::ButtonBuilder::new()

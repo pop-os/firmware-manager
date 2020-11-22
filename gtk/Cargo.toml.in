@@ -13,13 +13,13 @@ system76 = []
 better-panic = "0.2.0"
 cascade = "0.1.4"
 err-derive = "0.2.3"
-gio = "0.8.1"
-glib = "0.9.3"
-gtk = { version = "0.8.1", features = [ "v3_22" ] }
+gio = "0.9.0"
+glib = "0.10.0"
+gtk = { version = "0.9.0", features = [ "v3_22" ] }
 shrinkwraprs = "0.3.0"
 slotmap = "0.4.0"
 html2runes = "1.0.1"
-gdk = "0.12.1"
+gdk = "0.13.0"
 upower_dbus = "0.1.0"
 fern = "0.6.0"
 log = "0.4.8"

@@ -64,7 +64,7 @@ fn main() {
             ..add(widget.container());
             ..show_all();
             ..connect_delete_event(move |window, _| {
-                window.destroy();
+                window.close();
 
                 // Allow this closure to attain ownership of our firmware widget,
                 // so that this widget will exist for as long as the window exists.
@@ -73,7 +73,7 @@ fn main() {
                 Inhibit(false)
             });
             ..connect_key_press_event(move |window, event| {
-                use gdk::enums::key;
+                use gdk::keys::constants as key;
                 gtk::Inhibit(match event.get_keyval() {
                     key::q if event.get_state().contains(gdk::ModifierType::CONTROL_MASK) => {
                         let _ = window.emit("delete-event", &[&gdk::Event::new(gdk::EventType::Delete)]);
