@@ -8,6 +8,9 @@ edition = "2018"
 name = "firmware_manager"
 crate-type = [ "cdylib" ]
 
+[build-dependencies]
+cdylib-link-lines = "0.1"
+
 [dependencies]
 glib = "0.10.0"
 gtk-sys = "0.10.0"
