@@ -1,6 +1,6 @@
 [package]
 name = "firmware-manager-gtk"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
 edition = "2018"
 
