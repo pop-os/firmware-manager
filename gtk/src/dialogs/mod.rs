@@ -33,15 +33,14 @@ impl FirmwareUpdateDialog {
         if has_battery {
             header.push_str(
                 " Connect your computer to power. <b>USB Type-C</b> charging is not \
-                supported for firmware updates.",
+                supported for firmware updates.\n\n",
             );
         }
 
         header.push_str(
-            " After the system powers off, press the \
-            power button to turn it back on. It may be necessary to power on more \
-            than once after a firmware update. On machines running Open Firmware, \
-            the system should then boot normally.",
+            "After the firmware update is complete, it may be necessary to press \
+            the power button more than once. See \
+            https://support.system76.com/articles/system-firmware/ for more information.",
         );
 
         let changelog_container = cascade! {
