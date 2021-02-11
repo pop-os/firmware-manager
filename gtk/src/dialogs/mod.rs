@@ -28,11 +28,11 @@ impl FirmwareUpdateDialog {
     ) -> Self {
         let changelog_entries = crate::changelog::generate_widget(changelog);
 
-        let mut header = ["Firmware version ", version, " is available."].concat();
+        let mut header = ["Firmware version ", version, " is available. "].concat();
 
         if has_battery {
             header.push_str(
-                " Connect your computer to power. <b>USB Type-C</b> charging is not \
+                "Connect your computer to power. <b>USB Type-C</b> charging is not \
                 supported for firmware updates.\n\n",
             );
         }
@@ -40,7 +40,7 @@ impl FirmwareUpdateDialog {
         header.push_str(
             "After the firmware update is complete, it may be necessary to press \
             the power button more than once. See \
-            https://support.system76.com/articles/system-firmware/ for more information.",
+            <a href=\"https://support.system76.com/articles/system-firmware/\">this support article</a> for more information.",
         );
 
         let changelog_container = cascade! {
