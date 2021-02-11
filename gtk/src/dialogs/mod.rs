@@ -40,7 +40,8 @@ impl FirmwareUpdateDialog {
         header.push_str(
             "After the firmware update is complete, it may be necessary to press \
             the power button more than once. See \
-            <a href=\"https://support.system76.com/articles/system-firmware/\">this support article</a> for more information.",
+            <a href=\"https://support.system76.com/articles/system-firmware/\">this support article</a> \
+            for more information.",
         );
 
         let changelog_container = cascade! {
