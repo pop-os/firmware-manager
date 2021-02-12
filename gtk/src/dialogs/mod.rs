@@ -1,4 +1,3 @@
-use textwrap::fill;
 use gtk::prelude::*;
 
 #[cfg(feature = "fwupd")]
@@ -29,17 +28,26 @@ impl FirmwareUpdateDialog {
     ) -> Self {
         let changelog_entries = crate::changelog::generate_widget(changelog);
 
-        let mut header = ["Firmware version ", version, " is available."].concat();
+        let mut header = ["Firmware version ", version, " is available. "].concat();
 
         if has_battery {
-            header.push_str(" Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.");
-            header = (&*fill(&header, 75)).to_string();
+            header.push_str(
+                "Connect your computer to power. <b>USB Type-C</b> charging is not \
+                supported for firmware updates.\n\n",
+            );
         }
+
+        header.push_str(
+            "After the firmware update is complete, it may be necessary to press \
+            the power button more than once. See \
+            <a href=\"https://support.system76.com/articles/system-firmware/\">this support article</a> \
+            for more information.",
+        );
 
         let changelog_container = cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_vexpand(true);
-            ..add(&gtk::LabelBuilder::new().label(&*header).xalign(0.0).use_markup(true).build());
+            ..add(&gtk::LabelBuilder::new().label(&*header).wrap(true).xalign(0.0).use_markup(true).build());
             ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
             ..add(&changelog_entries);
             ..show_all();
