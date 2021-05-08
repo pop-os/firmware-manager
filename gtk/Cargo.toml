@@ -11,18 +11,19 @@ system76 = []
 
 [dependencies]
 better-panic = "0.2.0"
-cascade = "0.1.4"
-err-derive = "0.2.3"
-gio = "0.9.0"
-glib = "0.10.0"
-gtk = { version = "0.9.0", features = [ "v3_22" ] }
-shrinkwraprs = "0.3.0"
-slotmap = "0.4.0"
-html2runes = "1.0.1"
-gdk = "0.13.0"
-upower_dbus = "0.1.0"
-fern = "0.6.0"
-log = "0.4.8"
-clap = "2.33.0"
-yansi = "0.5.0"
-firmware-manager = { path = "../", default-features = false, features = [ "fwupd","system76", ] }
+cascade = "1.0"
+clap = "2.33"
+fern = "0.6"
+firmware-manager = { path = "../" }
+gdk = "0.13"
+gio = "0.9"
+glib = "0.10"
+gtk = { version = "0.9", features = [ "v3_22" ] }
+html2runes = "1.0"
+log = "0.4"
+shrinkwraprs = "0.3"
+upower_dbus = "0.1"
+yansi = "0.5"
+
+# Rust 1.49 required to update
+slotmap = "0.4"
