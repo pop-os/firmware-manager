@@ -16,3 +16,4 @@ markup = "0.4.1"
 err-derive = "0.2.3"
 notify-rust = "3.6.3"
 reqwest = "0.10.4"
+firmware-manager = { path = "../", default-features = false, features = [ "fwupd","system76", ] }
