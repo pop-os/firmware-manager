@@ -288,12 +288,6 @@ dependencies = [
 
 [[package]]
 name = "cascade"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31c9ddf4a1a9dbf82e130117f81b0c292fb5416000cbaba11eb92a65face2613"
-
-[[package]]
-name = "cascade"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f18c6a921baae2d947e4cf96f6ef1b5774b3056ae8edbdf5c5cfce4f33260921"
@@ -812,9 +806,8 @@ name = "firmware-manager-gtk"
 version = "0.1.2"
 dependencies = [
  "better-panic",
- "cascade 0.1.4",
+ "cascade",
  "clap",
- "err-derive 0.2.4",
  "fern",
  "firmware-manager",
  "gdk",
@@ -1050,7 +1043,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74a64ac895029d2ca6aee400c707e14a0c5ba521a117235fad22cca86ccee399"
 dependencies = [
  "bitflags",
- "cascade 1.0.0",
+ "cascade",
  "crypto-hash",
  "dbus 0.8.4",
  "err-derive 0.3.0",
