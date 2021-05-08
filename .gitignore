@@ -4,8 +4,5 @@
 vendor
 vendor.tar
 target
-gtk/Cargo.toml
-gtk/ffi/Cargo.toml
 gtk/ffi/examples/c/build/
 gtk/ffi/target
-notify/Cargo.toml

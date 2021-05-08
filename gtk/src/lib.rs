@@ -89,9 +89,6 @@ impl FirmwareWidget {
     /// - This will spawn a background thread to handle non-UI events.
     /// - On drop, the background thread will exit
     pub fn new() -> Self {
-        #[cfg(all(not(feature = "fwupd"), not(feature = "system76")))]
-        compile_error!("must enable one or more of [fwupd system76]");
-
         let (sender, rx) = channel();
 
         let view_devices = DevicesView::new();
@@ -293,7 +290,6 @@ impl FirmwareWidget {
                     }
                 }
                 // An event that occurs when fwupd firmware is found.
-                #[cfg(feature = "fwupd")]
                 Firmware(Fwupd(signal)) => state.fwupd(signal),
                 // Begins searching for devices that have firmware upgrade support
                 Firmware(Scanning) => {
@@ -319,10 +315,8 @@ impl FirmwareWidget {
                 // When system firmwmare is successfully scheduled, reboot the system.
                 Firmware(SystemScheduled) => reboot(),
                 // An event that occurs when System76 system firmware has been found.
-                #[cfg(feature = "system76")]
                 Firmware(S76System(info, data)) => state.system76_system(info, data),
                 // An event that occurs when a Thelio I/O board was discovered.
-                #[cfg(feature = "system76")]
                 Firmware(ThelioIo(info, digest)) => state.thelio_io(info, digest),
                 // Schedules the given firmware for an update, and show a dialog if it requires a
                 // reboot.

@@ -16,7 +16,6 @@ pub fn sort_versions_reverse<V: Versioned>(input: &mut [V]) {
     input.sort_by(|a, b| human_sort::compare(b.version(), a.version()));
 }
 
-#[cfg(feature = "fwupd")]
 impl Versioned for fwupd_dbus::Release {
     fn version(&self) -> &str { &self.version }
 }
