@@ -1,3 +1,4 @@
+use crate::fl;
 use gtk::prelude::*;
 
 /// View displayed when scanning has completed, but no firmware was found.
@@ -5,13 +6,7 @@ use gtk::prelude::*;
 pub struct EmptyView(gtk::Container);
 
 impl EmptyView {
-    pub fn new() -> Self {
-        Self(error_view(
-            "firmware-manager-symbolic",
-            "Managed Firmware Unavailable\n\nNo devices supporting automatic firmware updates \
-             detected",
-        ))
-    }
+    pub fn new() -> Self { Self(error_view("firmware-manager-symbolic", &fl!("view-empty"))) }
 }
 
 /// View displayed to users who lack administrative permissions.
@@ -20,10 +15,7 @@ pub struct PermissionView(gtk::Container);
 
 impl PermissionView {
     pub fn new() -> Self {
-        Self(error_view(
-            "system-lock-screen-symbolic",
-            "Permission Required\n\nOnly administrator accounts may update firmware.",
-        ))
+        Self(error_view("system-lock-screen-symbolic", &fl!("view-permission")))
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::fl;
 use firmware_manager::FirmwareInfo;
 use gtk::prelude::*;
 
@@ -75,7 +76,7 @@ impl DeviceWidget {
             ..pulse();
         };
 
-        let waiting = gtk::LabelBuilder::new().label("Waiting").build();
+        let waiting = gtk::LabelBuilder::new().label(&fl!("action-waiting")).build();
 
         let stack = cascade! {
             gtk::Stack::new();

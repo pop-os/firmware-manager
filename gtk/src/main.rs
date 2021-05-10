@@ -6,11 +6,13 @@ mod logging;
 use firmware_manager_gtk::FirmwareWidget;
 use gio::prelude::*;
 use gtk::prelude::*;
+use i18n_embed::DesktopLanguageRequester;
 use std::rc::Rc;
 
 pub const APP_ID: &str = "com.system76.FirmwareManager";
 
 fn main() {
+    translate();
     argument_parsing();
 
     better_panic::install();
@@ -112,5 +114,14 @@ fn argument_parsing() {
 
     if let Err(why) = logging::install(logging_level) {
         eprintln!("failed to initiate logging: {}", why);
+    }
+}
+
+fn translate() {
+    let localizer = firmware_manager_gtk::localizer();
+    let requested_languages = DesktopLanguageRequester::requested_languages();
+
+    if let Err(error) = localizer.select(&requested_languages) {
+        eprintln!("Error while loading languages for firmware-manager-gtk {}", error);
     }
 }

@@ -19,10 +19,13 @@ extern crate shrinkwraprs;
 
 mod changelog;
 mod dialogs;
+mod localize;
 mod state;
 mod traits;
 mod views;
 mod widgets;
+
+pub use self::localize::localizer;
 
 use self::{state::State, views::*};
 use firmware_manager::*;
@@ -235,10 +238,13 @@ impl FirmwareWidget {
                 Firmware(DeviceFlashing(entity)) => {
                     firmware_flashing.store(true, Ordering::SeqCst);
                     let widget = &state.components.device_widgets[entity];
-                    let message =
-                        if state.entities.is_system(entity) { "Scheduling" } else { "Flashing" };
+                    let message = if state.entities.is_system(entity) {
+                        fl!("action-scheduling")
+                    } else {
+                        fl!("action-flashing")
+                    };
 
-                    widget.stack.switch_to_progress(message);
+                    widget.stack.switch_to_progress(&message);
                     state.progress_activate(&widget.stack.progress);
                 }
                 // An event that occurs when firmware has successfully updated.
@@ -251,7 +257,7 @@ impl FirmwareWidget {
                 Firmware(DownloadBegin(entity, size)) => {
                     let widget = &state.components.device_widgets[entity];
                     state.components.firmware_download.insert(entity, (0, size));
-                    widget.stack.switch_to_progress("Downloading");
+                    widget.stack.switch_to_progress(&fl!("action-downloading"));
                 }
                 // Firmware for a device has finished downloading.
                 Firmware(DownloadComplete(entity)) => {
