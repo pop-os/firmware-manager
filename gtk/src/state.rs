@@ -1,4 +1,4 @@
-use crate::{dialogs::*, views::*, widgets::*, ActivateEvent, Event, UiEvent};
+use crate::{dialogs::*, fl, views::*, widgets::*, ActivateEvent, Event, UiEvent};
 use firmware_manager::*;
 
 use gtk::prelude::*;
@@ -189,7 +189,10 @@ impl State {
                 let log_entries = changelog.versions.iter().map(|version| {
                     (
                         version.bios.as_ref(),
-                        version.description.as_ref().map_or("N/A", |desc| desc.as_ref()),
+                        version.description.as_ref().map_or_else(
+                            || fl!("not-applicable"),
+                            |desc| String::from(desc.as_ref()),
+                        ),
                     )
                 });
 
@@ -340,7 +343,7 @@ fn reveal<F: FnMut() -> gtk::Container>(
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
                 ..set_vexpand(true);
                 ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
-                ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
+                ..add(&gtk::LabelBuilder::new().label(&format!("<b>{}</b>", fl!("changelog"))).use_markup(true).xalign(0.0).build());
                 ..add(&widget);
                 ..show_all();
             };

@@ -1,5 +1,5 @@
+use crate::fl;
 use gtk::prelude::*;
-use std::borrow::Cow;
 
 pub fn generate_widget_none() -> gtk::Box {
     gtk::BoxBuilder::new()
@@ -7,17 +7,18 @@ pub fn generate_widget_none() -> gtk::Box {
         .margin_end(48)
         .child(
             &gtk::LabelBuilder::new()
-                .label("No changelog available")
+                .label(&fl!("changelog-unavailable"))
                 .build()
                 .upcast::<gtk::Widget>(),
         )
         .build()
 }
 
-pub fn generate_widget<I, S>(changelog: I) -> gtk::Box
+pub fn generate_widget<I, S, X>(changelog: I) -> gtk::Box
 where
     S: AsRef<str>,
-    I: Iterator<Item = (S, S)>,
+    X: AsRef<str>,
+    I: Iterator<Item = (S, X)>,
 {
     let changelog_entries = cascade! {
         gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -27,9 +28,9 @@ where
     let mut initiated = false;
     changelog.for_each(|(version, entry)| {
         let markdown = if entry.as_ref().is_empty() {
-            Cow::Borrowed("No changelog available")
+            fl!("changelog-unavailable")
         } else {
-            Cow::Owned(html2runes::markdown::convert_string(entry.as_ref()))
+            html2runes::markdown::convert_string(entry.as_ref())
         };
 
         // NOTE: If we don't set a max width in chars, the label resizes its parent.

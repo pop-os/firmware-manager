@@ -1,9 +1,10 @@
-use gtk::prelude::*;
-
 mod fwupd;
 mod system76;
 
 pub use self::{fwupd::FwupdDialog, system76::System76Dialog};
+
+use crate::fl;
+use gtk::prelude::*;
 
 /// A generic GTK dialog which is displayed for firmware which requires a system reboot.
 ///
@@ -21,36 +22,36 @@ impl FirmwareUpdateDialog {
     ) -> Self {
         let changelog_entries = crate::changelog::generate_widget(changelog);
 
-        let mut header = ["Firmware version ", version, " is available. "].concat();
+        let mut header = fl!("update-available", version = version);
+        header.push(' ');
 
         if has_battery {
-            header.push_str(
-                "Connect your computer to power. <b>USB Type-C</b> charging is not supported for \
-                 firmware updates.\n\n",
-            );
+            header.push_str(&fl!("update-connect-to-ac"));
+            header.push_str("\n\n")
         }
 
-        header.push_str(
-            "After the firmware update is complete, it may be necessary to press \
-            the power button more than once. See \
-            <a href=\"https://support.system76.com/articles/system-firmware/\">this support article</a> \
-            for more information.",
-        );
+        header.push_str(&fl!(
+            "update-guide",
+            url_tag_start = "<a href=\"https://support.system76.com/articles/system-firmware/\">",
+            url_tag_end = "</a>"
+        ));
+
+        let changelog_text = format!("<b>{}</b>", fl!("changelog"));
 
         let changelog_container = cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_vexpand(true);
             ..add(&gtk::LabelBuilder::new().label(&*header).wrap(true).xalign(0.0).use_markup(true).build());
-            ..add(&gtk::LabelBuilder::new().label("<b>Changelog</b>").use_markup(true).xalign(0.0).build());
+            ..add(&gtk::LabelBuilder::new().label(&*changelog_text).use_markup(true).xalign(0.0).build());
             ..add(&changelog_entries);
             ..show_all();
         };
 
-        let cancel = gtk::Button::with_label("Cancel");
+        let cancel = gtk::Button::with_label(&fl!("button-cancel"));
 
         let reboot = cascade! {
             gtk::ButtonBuilder::new()
-                .label("Reboot and Install")
+                .label(&fl!("button-reboot-and-install"))
                 .build();
             ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
@@ -74,7 +75,7 @@ impl FirmwareUpdateDialog {
             &headerbar;
             ..set_custom_title(
                 Some(&gtk::LabelBuilder::new()
-                    .label("<b>Firmware Update</b>")
+                    .label(&format!("<b>{}</b>", fl!("header-firmware-update")))
                     .use_markup(true)
                     .build())
             );

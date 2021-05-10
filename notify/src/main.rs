@@ -1,4 +1,7 @@
+mod localize;
+
 use firmware_manager::{get_client, FirmwareSignal, FwupdError, FwupdSignal};
+use i18n_embed::DesktopLanguageRequester;
 use notify_rust::{Notification, Timeout};
 use std::{
     path::Path,
@@ -14,6 +17,8 @@ use firmware_manager::{
 };
 
 fn main() {
+    translate();
+
     if !firmware_manager::user_is_admin() {
         return;
     }
@@ -51,7 +56,7 @@ fn main() {
 
     if let Some(ref client) = fwupd {
         if let Err(why) = fwupd_updates(client) {
-            eprintln!("failed to update fwupd remotes: {}", why);
+            eprintln!("{}: {}", fl!("error-fwupd"), why);
         }
 
         fwupd_scan(client, &event_handler);
@@ -60,8 +65,8 @@ fn main() {
 
 fn notify() {
     Notification::new()
-        .summary("Firmware updates are available.")
-        .body("Click here to install them.")
+        .summary(&fl!("summary"))
+        .body(&fl!("body"))
         .icon("firmware-manager")
         .appname("firmware-manager")
         .action("default", "default")
@@ -84,4 +89,13 @@ fn notify() {
         });
 
     exit(UPDATES_FOUND);
+}
+
+fn translate() {
+    let localizer = crate::localize::localizer();
+    let requested_languages = DesktopLanguageRequester::requested_languages();
+
+    if let Err(error) = localizer.select(&requested_languages) {
+        eprintln!("Error while loading languages for firmware-manager-notify {}", error);
+    }
 }

@@ -1,5 +1,6 @@
 use firmware_manager_gtk::FirmwareWidget;
 use glib::object::ObjectType;
+use i18n_embed::DesktopLanguageRequester;
 use std::ptr;
 
 #[no_mangle]
@@ -11,6 +12,8 @@ pub extern "C" fn s76_firmware_widget_new() -> *mut S76FirmwareWidget {
     unsafe {
         gtk::set_initialized();
     }
+
+    translate();
 
     Box::into_raw(Box::new(FirmwareWidget::new())) as *mut S76FirmwareWidget
 }
@@ -36,4 +39,13 @@ pub extern "C" fn s76_firmware_widget_scan(ptr: *mut S76FirmwareWidget) -> i32 {
         widget.scan();
         0
     })
+}
+
+fn translate() {
+    let localizer = firmware_manager_gtk::localizer();
+    let requested_languages = DesktopLanguageRequester::requested_languages();
+
+    if let Err(error) = localizer.select(&requested_languages) {
+        eprintln!("Error while loading languages for firmware-manager-gtk {}", error);
+    }
 }
