@@ -875,7 +875,7 @@ dependencies = [
 
 [[package]]
 name = "firmware-manager"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "better-panic",
  "futures 0.3.14",
@@ -898,7 +898,7 @@ dependencies = [
 
 [[package]]
 name = "firmware-manager-gtk"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "better-panic",
  "cascade",
@@ -923,7 +923,7 @@ dependencies = [
 
 [[package]]
 name = "firmware-manager-gtk-ffi"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "cdylib-link-lines",
  "firmware-manager-gtk",
@@ -938,7 +938,7 @@ dependencies = [
 
 [[package]]
 name = "firmware-manager-notify"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "firmware-manager",
  "fomat-macros",
