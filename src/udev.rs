@@ -1,41 +1,44 @@
-use futures::{stream::Stream, Future};
+use futures::{
+    future::{ready, AbortHandle, Abortable},
+    stream::StreamExt,
+};
 use std::thread;
-use stream_cancel::{Trigger, Valved};
-use tokio_udev::{Context, Event, EventType, MonitorBuilder};
-
-macro_rules! ok_or_return {
-    ($expression:expr) => {
-        match $expression {
-            Ok(value) => value,
-            Err(_) => return None,
-        }
-    };
-}
+use tokio_udev::{EventType, MonitorBuilder};
 
 /// Convenience function for an event loop which reacts to USB hotplug events.
-pub fn usb_hotplug_event_loop<F: Fn() + Send + 'static>(func: F) -> Option<Trigger> {
+pub fn usb_hotplug_event_loop<F: Fn() + Send + 'static>(func: F) -> Option<AbortHandle> {
     trace!("initiating USB hotplug event loop thread");
 
-    let context = ok_or_return!(Context::new());
-    let mut builder = ok_or_return!(MonitorBuilder::new(&context));
-    ok_or_return!(builder.match_subsystem_devtype("usb", "usb_device"));
-    let monitor = ok_or_return!(builder.listen());
-
-    let handler = move |e: Event| {
-        match e.event_type() {
-            EventType::Add | EventType::Remove => func(),
-            _ => (),
-        }
-        Ok(())
-    };
-
-    let (triggered, stream) = Valved::new(monitor);
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
     thread::spawn(move || {
         trace!("USB hotplug events now being processed");
-        tokio::run(stream.for_each(handler).map_err(|_| ()));
+
+        let _ =
+            tokio::runtime::Builder::new_current_thread().enable_io().build().unwrap().block_on(
+                async move {
+                    let future = MonitorBuilder::new()
+                        .expect("couldn't create monitor builder")
+                        .match_subsystem_devtype("usb", "usb_device")
+                        .expect("failed to add filter for USB devices")
+                        .listen()
+                        .expect("couldn't create MonitorSocket")
+                        .for_each(move |event| {
+                            if let Ok(event) = event {
+                                if let EventType::Add | EventType::Remove = event.event_type() {
+                                    func();
+                                }
+                            }
+
+                            ready(())
+                        });
+
+                    Abortable::new(future, abort_registration).await
+                },
+            );
+
         trace!("usb hotplug thread stopped");
     });
 
-    Some(triggered)
+    Some(abort_handle)
 }

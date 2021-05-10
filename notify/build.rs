@@ -1,33 +1,34 @@
+use fomat_macros::fomat;
 use std::{env, fs::File, io::Write};
 
-markup::define! {
-    Service<'a>(description: &'a str, appid: &'a str, exec: &'a str) {
+fn service(description: &str, appid: &str, exec: &str) -> String {
+    fomat!(
         "[Unit]\n"
-        "Description=" { markup::raw(description) } "\n"
-        "Wants=" { markup::raw(appid) } ".timer\n"
+        "Description=" (description) "\n"
+        "Wants=" (appid) ".timer\n"
         "\n"
         "[Service]\n"
-        "ExecStart=" { markup::raw(exec) } "\n"
+        "ExecStart=" (exec) "\n"
         "\n"
         "[Install]\n"
         "WantedBy=default.target\n"
-    }
+    )
 }
 
-markup::define! {
-    Timer<'a>(description: &'a str, appid: &'a str, minutes: u16) {
+fn timer(description: &str, appid: &str, minutes: u16) -> String {
+    fomat!(
         "[Unit]\n"
-        "Description=" { markup::raw(description) } "\n"
-        "Requires=" { markup::raw(appid) } ".service\n"
+        "Description=" (description) "\n"
+        "Requires=" (appid) ".service\n"
         "\n"
         "[Timer]\n"
-        "Unit=" { markup::raw(appid) } ".service\n"
-        "OnUnitInactiveSec=" { markup::raw(minutes) } "m\n"
+        "Unit=" (appid) ".service\n"
+        "OnUnitInactiveSec=" (minutes) "m\n"
         "AccuracySec=1s\n"
         "\n"
         "[Install]\n"
         "WantedBy=timers.target\n"
-    }
+    )
 }
 
 fn main() {
@@ -38,17 +39,10 @@ fn main() {
     let service_path = ["../target/", &appid, ".service"].concat();
     let exec = [&prefix, "/bin/", &appid].concat();
 
-    let timer = Timer {
-        description: "Checks for new firmware every day",
-        appid:       &appid,
-        minutes:     1440,
-    };
+    let timer = timer("Checks for new firmware every day", &appid, 1440);
 
-    let service = Service {
-        description: "Check for firmware updates, and display a notification if found",
-        appid:       &appid,
-        exec:        &exec,
-    };
+    let service =
+        service("Check for firmware updates, and display a notification if found", &appid, &exec);
 
     File::create(timer_path)
         .expect("failed to create timer service")

@@ -3,8 +3,7 @@ use gtk::prelude::*;
 mod fwupd;
 mod system76;
 
-pub use self::fwupd::FwupdDialog;
-pub use self::system76::System76Dialog;
+pub use self::{fwupd::FwupdDialog, system76::System76Dialog};
 
 /// A generic GTK dialog which is displayed for firmware which requires a system reboot.
 ///
@@ -26,8 +25,8 @@ impl FirmwareUpdateDialog {
 
         if has_battery {
             header.push_str(
-                "Connect your computer to power. <b>USB Type-C</b> charging is not \
-                supported for firmware updates.\n\n",
+                "Connect your computer to power. <b>USB Type-C</b> charging is not supported for \
+                 firmware updates.\n\n",
             );
         }
 

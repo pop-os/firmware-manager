@@ -8,13 +8,13 @@ use std::cmp::Ordering;
 #[derive(Debug)]
 pub struct FwupdSignal {
     /// Generic information about the firmware.
-    pub info: FirmwareInfo,
+    pub info:        FirmwareInfo,
     /// Information specific to fwupd devices.
-    pub device: FwupdDevice,
+    pub device:      FwupdDevice,
     /// Tracks whether the firmware is upgradeable or not.
     pub upgradeable: bool,
     /// All releases that were found for the firmware.
-    pub releases: Vec<FwupdRelease>,
+    pub releases:    Vec<FwupdRelease>,
 }
 
 /// Scan for supported devices from the fwupd DBus daemon.
@@ -65,10 +65,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 }
 
 /// Update the fwupd remotes
-pub fn fwupd_updates(
-    client: &FwupdClient,
-    http: &reqwest::blocking::Client,
-) -> Result<(), fwupd_dbus::Error> {
+pub fn fwupd_updates(client: &FwupdClient) -> Result<(), fwupd_dbus::Error> {
     const SECONDS_IN_DAY: u64 = 60 * 60 * 24;
 
     if crate::timestamp::exceeded(SECONDS_IN_DAY).ok().unwrap_or(true) {
@@ -87,7 +84,7 @@ pub fn fwupd_updates(
 
             if let fwupd_dbus::RemoteKind::Download = remote.kind {
                 info!("Updating {:?} metadata from {:?}", remote.remote_id, remote.uri);
-                if let Err(why) = remote.update_metadata(client, http) {
+                if let Err(why) = remote.update_metadata(client) {
                     error!(
                         "failed to fetch updates from {}: {:?}",
                         remote.filename_cache,

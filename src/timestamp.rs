@@ -9,14 +9,14 @@ use std::{
 /// An error that may occur when reading or writing the timestamp file.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error(display = "cache error")]
-    Cache(#[error(cause)] cache::Error),
-    #[error(display = "failed to read last update file")]
-    Read(#[error(cause, no_from)] io::Error),
-    #[error(display = "failed to write timestamp")]
-    Write(#[error(cause, no_from)] io::Error),
-    #[error(display = "failed to create cache directory for timestamp file")]
-    Parent(#[error(cause, no_from)] io::Error),
+    #[error("cache error")]
+    Cache(#[from] cache::Error),
+    #[error("failed to read last update file")]
+    Read(#[source] io::Error),
+    #[error("failed to write timestamp")]
+    Write(#[source] io::Error),
+    #[error("failed to create cache directory for timestamp file")]
+    Parent(#[source] io::Error),
 }
 
 /// Fetches the timestamp that is currently stored in the cache.
