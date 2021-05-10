@@ -6,7 +6,7 @@
 //! useful capabilities that are useful to frontends of the firmware manager.
 
 #[macro_use]
-extern crate err_derive;
+extern crate thiserror;
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -32,11 +32,8 @@ pub use system76_firmware_daemon::{
     SystemInfo as S76SystemInfo, ThelioIoInfo,
 };
 
-pub use self::fwupd::*;
-pub use self::system76::*;
-pub use system76_firmware_daemon::Client as System76Client;
-pub use self::udev::usb_hotplug_event_loop;
 use self::version_sorting::sort_versions;
+pub use self::{fwupd::*, system76::*, udev::usb_hotplug_event_loop};
 pub use slotmap::DefaultKey as Entity;
 use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
@@ -44,16 +41,17 @@ use std::{
     process::Command,
     sync::{mpsc::Receiver, Arc},
 };
+pub use system76_firmware_daemon::Client as System76Client;
 
 /// Errors that may occur in the firmware manager core.
 #[derive(Debug, Error)]
 pub enum Error {
     /// Errors specific to fwupd devices.
-    #[error(display = "error in fwupd client")]
-    Fwupd(#[error(cause)] fwupd_dbus::Error),
+    #[error("error in fwupd client")]
+    Fwupd(#[from] fwupd_dbus::Error),
     /// Errors specific to system76 devices.
-    #[error(display = "error in system76-firmware client")]
-    System76(#[error(cause)] System76Error),
+    #[error("error in system76-firmware client")]
+    System76(#[from] System76Error),
 }
 
 /// A request for the background event loop to perform.
@@ -183,8 +181,6 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
         get_client::<_, _, fwupd_dbus::Error>("fwupd", || true, fwupd_connect)
     };
 
-    let http_client = &reqwest::blocking::Client::new();
-
     while let Ok(event) = receiver.recv() {
         trace!("event loop received firmware event: {:?}", event);
         match event {
@@ -197,7 +193,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 }
 
                 if let Some(ref client) = fwupd {
-                    if let Err(why) = fwupd_updates(client, http_client) {
+                    if let Err(why) = fwupd_updates(client) {
                         eprintln!("failed to update fwupd remotes: {}", why);
                     }
                     fwupd_scan(client, sender);
@@ -209,7 +205,6 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                 let flags = fwupd_dbus::InstallFlags::empty();
                 let event = match fwupd.as_ref().map(|fwupd| {
                     fwupd.update_device_with_release(
-                        http_client,
                         &device,
                         &release,
                         flags,
@@ -281,14 +276,7 @@ fn sys_vendor() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/sys_vend
 
 /// Creates a string identifying system firmware by the board vendor and name.
 pub(crate) fn system_board_identity() -> io::Result<String> {
-    Ok([
-        &*sys_vendor()?,
-        " ",
-        &*product_name()?,
-        " (",
-        &*product_version()?,
-        ")"
-    ].concat())
+    Ok([&*sys_vendor()?, " ", &*product_name()?, " (", &*product_version()?, ")"].concat())
 }
 
 /// Generic function for attaining a DBus client connection to a firmware service.

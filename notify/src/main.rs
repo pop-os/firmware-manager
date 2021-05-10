@@ -1,5 +1,4 @@
-use firmware_manager::{get_client, FirmwareSignal};
-use firmware_manager::{FwupdError, FwupdSignal};
+use firmware_manager::{get_client, FirmwareSignal, FwupdError, FwupdSignal};
 use notify_rust::{Notification, Timeout};
 use std::{
     path::Path,
@@ -10,8 +9,9 @@ const UPDATES_FOUND: i32 = 3;
 
 const GNOME_CONTROL_CENTER: &str = "/usr/share/applications/gnome-firmware-panel.desktop";
 
-use firmware_manager::{fwupd_scan, fwupd_updates, FwupdClient};
-use firmware_manager::{s76_firmware_is_active, s76_scan, System76Client};
+use firmware_manager::{
+    fwupd_scan, fwupd_updates, s76_firmware_is_active, s76_scan, FwupdClient, System76Client,
+};
 
 fn main() {
     if !firmware_manager::user_is_admin() {
@@ -29,8 +29,6 @@ fn main() {
             Ok(client)
         },
     );
-
-    let http_client = &reqwest::blocking::Client::new();
 
     let event_handler = |event: FirmwareSignal| match event {
         FirmwareSignal::Fwupd(FwupdSignal { upgradeable, .. }) => {
@@ -52,7 +50,7 @@ fn main() {
     }
 
     if let Some(ref client) = fwupd {
-        if let Err(why) = fwupd_updates(client, http_client) {
+        if let Err(why) = fwupd_updates(client) {
             eprintln!("failed to update fwupd remotes: {}", why);
         }
 

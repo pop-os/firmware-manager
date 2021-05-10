@@ -4,10 +4,10 @@ use gtk::prelude::*;
 #[derive(Shrinkwrap)]
 pub struct DeviceWidgetStack {
     #[shrinkwrap(main_field)]
-    pub stack: gtk::Stack,
-    pub button: gtk::Button,
+    pub stack:    gtk::Stack,
+    pub button:   gtk::Button,
     pub progress: gtk::ProgressBar,
-    pub waiting: gtk::Label,
+    pub waiting:  gtk::Label,
 }
 
 impl DeviceWidgetStack {
@@ -32,9 +32,9 @@ pub struct DeviceWidget {
     #[shrinkwrap(main_field)]
     pub container: gtk::Container,
     pub event_box: gtk::EventBox,
-    pub revealer: gtk::Revealer,
-    pub label: gtk::Label,
-    pub stack: DeviceWidgetStack,
+    pub revealer:  gtk::Revealer,
+    pub label:     gtk::Label,
+    pub stack:     DeviceWidgetStack,
 }
 
 impl DeviceWidget {

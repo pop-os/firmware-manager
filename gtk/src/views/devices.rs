@@ -12,12 +12,12 @@ use std::num::NonZeroU8;
 #[derive(Shrinkwrap)]
 pub struct DevicesView {
     #[shrinkwrap(main_field)]
-    container: gtk::Container,
+    container:       gtk::Container,
     device_firmware: gtk::ListBox,
-    device_header: gtk::Label,
-    sg: gtk::SizeGroup,
+    device_header:   gtk::Label,
+    sg:              gtk::SizeGroup,
     system_firmware: gtk::ListBox,
-    system_header: gtk::Label,
+    system_header:   gtk::Label,
 }
 
 impl DevicesView {
@@ -145,8 +145,12 @@ impl DevicesView {
 
     /// Clears all device widgets from the system and device list boxes.
     pub fn clear(&self) {
-        self.system_firmware.foreach(|x| unsafe { x.destroy(); });
-        self.device_firmware.foreach(|x| unsafe { x.destroy(); });
+        self.system_firmware.foreach(|x| unsafe {
+            x.destroy();
+        });
+        self.device_firmware.foreach(|x| unsafe {
+            x.destroy();
+        });
     }
 
     /// Creates and attaches a new device widget to the device section.

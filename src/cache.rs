@@ -6,10 +6,10 @@ use std::{
 /// An error that may occur when attempting to get the cache directory.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error(display = "failed to get XDG base directory")]
-    BaseDirectory(#[error(cause)] xdg::BaseDirectoriesError),
-    #[error(display = "failed to get cache directory")]
-    Place(#[error(cause)] io::Error),
+    #[error("failed to get XDG base directory")]
+    BaseDirectory(#[from] xdg::BaseDirectoriesError),
+    #[error("failed to get cache directory")]
+    Place(#[from] io::Error),
 }
 
 /// Fetches the XDG cache directory for com.system76.FirmwareManager

@@ -10,10 +10,9 @@ system76 = []
 fwupd = []
 
 [build-dependencies]
-markup = "0.4.1"
+fomat-macros = "0.3"
 
 [dependencies]
-err-derive = "0.2.3"
-notify-rust = "3.6.3"
-reqwest = "0.10.4"
-firmware-manager = { path = "../", default-features = false, features = [ "fwupd","system76", ] }
+notify-rust = "4.5"
+firmware-manager = { path = "../" }
+
