@@ -53,10 +53,10 @@ FFI_SOURCES = $(shell find gtk/ffi/src -type f -name '*.rs') \
 all: $(GTKBINARY) $(NOTBINARY) $(LIBRARY) $(PKGCONFIG)
 
 clean:
-	rm -rf target
+	cargo clean
 
 distclean: clean
-	rm -rf .cargo vendor vendor.tar.xz
+	rm -rf .cargo vendor vendor.tar
 
 ## Developer tools
 
@@ -66,16 +66,16 @@ clippy:
 
 ## Building the binaries
 
-bin $(GTKBINARY): $(DESKTOP) prepare
+bin $(GTKBINARY): $(DESKTOP) vendor-extract
 	cargo build --manifest-path $(GTKPROJ) $(ARGS)
 
-bin-notify $(NOTBINARY): $(STARTUP_DESKTOP) prepare
+bin-notify $(NOTBINARY): $(STARTUP_DESKTOP) vendor-extract
 	env APPID=$(NOTIFY_APPID) prefix=$(prefix) \
 		cargo build --manifest-path $(NOTPROJ) $(ARGS)
 
 ## Builds the desktop entry in the target directory.
 
-desktop $(DESKTOP): prepare
+desktop $(DESKTOP): vendor-extract
 	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(APPID) \
 		--name "Firmware Manager" \
@@ -91,7 +91,7 @@ desktop $(DESKTOP): prepare
 		--prefix $(prefix) \
 		--startup-notify
 
-notify-desktop $(STARTUP_DESKTOP): prepare
+notify-desktop $(STARTUP_DESKTOP): vendor-extract
 	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(NOTIFY_APPID) \
 		--name "Firmware Manager Check" \
@@ -105,7 +105,7 @@ notify-desktop $(STARTUP_DESKTOP): prepare
 
 ffi: $(LIBRARY) $(PKGCONFIG)
 
-$(LIBRARY): $(SOURCES) $(FFI_SOURCES) prepare
+$(LIBRARY): $(SOURCES) $(FFI_SOURCES) vendor-extract
 	cargo build --manifest-path $(GTKFFIPROJ) $(ARGS)
 
 ## Builds the pkg-config file necessary to locate the library.
@@ -141,10 +141,6 @@ install-icons:
 		cp -v $$icon $$dest; \
 	done
 
-## Pre-build preparation
-
-prepare: vendor-check
-
 ## Uninstall Commands
 
 uninstall: uninstall-bin uninstall-ffi
@@ -159,8 +155,9 @@ uninstall-ffi:
 
 ## Cargo Vendoring
 
-vendor:
-	rm .cargo -rf
+vendor: vendor.tar
+
+vendor.tar:
 	mkdir -p .cargo
 	cargo vendor \
 		--sync gtk/Cargo.toml \
@@ -169,10 +166,10 @@ vendor:
 		--sync tools/Cargo.toml \
 		| head -n -1 > .cargo/config
 	echo 'directory = "vendor"' >> .cargo/config
-	tar cf vendor.tar vendor
+	tar pcf vendor.tar vendor
 	rm -rf vendor
 
-vendor-check:
+vendor-extract:
 ifeq ($(VENDOR),1)
-	rm vendor -rf && tar xf vendor.tar
+	tar pxf vendor.tar
 endif
