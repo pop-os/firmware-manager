@@ -1,30 +1,30 @@
-action-downloading = Downloading
-action-scheduling = Scheduling
-action-flashing = Flashing
-action-waiting = Waiting
+action-downloading = Preuzimanje
+action-scheduling = Zakazivanje
+action-flashing = Instaliranje
+action-waiting = Čekanje
 
-button-reboot-and-install = Reboot and Install
-button-cancel = Cancel
+button-reboot-and-install = Restartuj i instaliraj
+button-cancel = Prekini
 
-changelog = Changelog
-changelog-unavailable = No changelog available
+changelog = Dnevnik promena
+changelog-unavailable = Dnevnik promena nije dostupan
 
-header-system-firmware = System Firmware
-header-device-firmware = Device Firmware
-header-firmware-update = Firmware Update
+header-system-firmware = Sistemski firmver
+header-device-firmware = Firmver uređaja
+header-firmware-update = Firmver ažuriranje
 
 not-applicable = N/A
 
-update-available = Firmware version {$version} is available.
+update-available = Firmver verzija {$version} je dostupna.
 
-update-connect-to-ac = Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.
+update-connect-to-ac = Povežite Vaš računar sa izvorom napajanja. <b>USB Tip-C</b> punjenje nije podržano za firmver ažuriranja.
 
-update-guide = After the firmware update is complete, it may be necessary to press the power button more than once. See {$url_tag_start}this support article{$url_tag_end} for more information.
+update-guide = Nakon što se firmver ažuriranje završi, neophodno je pritisnuti dugme za paljenje više od jednog puta. Videti {$url_tag_start}ovaj pomoćni članak{$url_tag_end} za više informacija.
 
-view-empty = Managed Firmware Unavailable
+view-empty = Firmver je nedostupan
 
- No devices supporting automatic firmware updates detected.
+ Nema uređaja koji podržavaju automatsko ažuriranje firmvera.
 
-view-permission = Permission Required
+view-permission = Potreban viši nivo ovlašćenja
 
- Only administrator accounts may update firmware.
+ Samo nalozi administratora mogu ažurirati firmver.
