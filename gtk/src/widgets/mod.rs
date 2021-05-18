@@ -58,7 +58,7 @@ impl DeviceWidget {
 
         let button = cascade! {
             gtk::ButtonBuilder::new()
-                .label("Update")
+                .label(&fl!("button-update"))
                 .halign(gtk::Align::End)
                 .hexpand(true)
                 .vexpand(true)

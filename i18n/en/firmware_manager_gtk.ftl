@@ -3,8 +3,9 @@ action-scheduling = Scheduling
 action-flashing = Flashing
 action-waiting = Waiting
 
-button-reboot-and-install = Reboot and Install
 button-cancel = Cancel
+button-reboot-and-install = Reboot and Install
+button-update = Update
 
 changelog = Changelog
 changelog-unavailable = No changelog available
