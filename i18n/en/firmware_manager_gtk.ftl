@@ -1,30 +1,32 @@
-action-downloading = Preuzimanje
-action-scheduling = Zakazivanje
-action-flashing = Instaliranje
-action-waiting = Čekanje
+action-downloading = Downloading
+action-scheduling = Scheduling
+action-flashing = Flashing
+action-waiting = Waiting
 
-button-reboot-and-install = Restartuj i instaliraj
-button-cancel = Prekini
+button-cancel = Cancel
+button-reboot-and-install = Reboot and Install
+button-update = Update
 
-changelog = Dnevnik promena
-changelog-unavailable = Dnevnik promena nije dostupan
+changelog = Changelog
+changelog-unavailable = No changelog available
 
-header-system-firmware = Sistemski firmver
-header-device-firmware = Firmver uređaja
-header-firmware-update = Firmver ažuriranje
+header-system-firmware = System Firmware
+header-device-firmware = Device Firmware
+header-firmware-update = Firmware Update
 
 not-applicable = N/A
 
-update-available = Firmver verzija {$version} je dostupna.
+update-available = Firmware version {$version} is available.
 
-update-connect-to-ac = Povežite Vaš računar sa izvorom napajanja. <b>USB Tip-C</b> punjenje nije podržano za firmver ažuriranja.
+update-connect-to-ac = Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.
 
-update-guide = Nakon što se firmver ažuriranje završi, neophodno je pritisnuti dugme za paljenje više od jednog puta. Videti {$url_tag_start}ovaj pomoćni članak{$url_tag_end} za više informacija.
+update-guide = After the firmware update is complete, it may be necessary to press the power button more than once. See {$url_tag_start}this support article{$url_tag_end} for more information.
 
-view-empty = Firmver je nedostupan
+view-empty = Managed Firmware Unavailable
 
- Nema uređaja koji podržavaju automatsko ažuriranje firmvera.
+ No devices supporting automatic firmware updates detected.
 
-view-permission = Potreban viši nivo ovlašćenja
+view-permission = Permission Required
 
- Samo nalozi administratora mogu ažurirati firmver.
+ Only administrator accounts may update firmware.
+

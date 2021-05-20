@@ -1,4 +1,4 @@
-summary = Firmver ažuriranja su dostupna.
-body = Kliknite ovde da biste ih instalirali.
+summary = Firmware updates are available.
+body = Click here to install them.
 
-error-fwupd = Greška pri ažuriranju fwupd listi
+error-fwupd = Failed to update fwupd remotes
