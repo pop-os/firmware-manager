@@ -3,8 +3,9 @@ action-scheduling = Zakazivanje
 action-flashing = Instaliranje
 action-waiting = Čekanje
 
-button-reboot-and-install = Restartuj i instaliraj
 button-cancel = Prekini
+button-reboot-and-install = Restartuj i instaliraj
+button-update = Ažuriraj
 
 changelog = Dnevnik promena
 changelog-unavailable = Dnevnik promena nije dostupan
