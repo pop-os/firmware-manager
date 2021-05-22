@@ -3,8 +3,9 @@ action-scheduling = Agendando
 action-flashing = Gravando
 action-waiting = Aguardando
 
-button-reboot-and-install = Reiniciar e Instalar
 button-cancel = Cancelar
+button-reboot-and-install = Reiniciar e Instalar
+button-update = Atualizar
 
 changelog = Registro de alterações
 changelog-unavailable = Registro de alterações indisponível
