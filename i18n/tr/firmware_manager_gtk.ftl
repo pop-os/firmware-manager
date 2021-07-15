@@ -22,8 +22,6 @@ update-connect-to-ac = Bilgisayarınızı şarja takın. Aygıt yazılımı gün
 
 update-guide = Aygıt yazılımı güncellemesinden sonra açılış düğmesine birden fazla kez basmanız gerekebilir. Detay için {$url_tag_start}şu destek makalesine{$url_tag_end} gözatabilirsiniz.
 
-view-empty = Managed Firmware Unavailable
-
 view-empty = Otomatik Aygıt Yazılımı Güncellemesi Bulunamadı
 
  Otomatik aygıt yazılımı güncellemesini destekleyen herhangi bir cihaz tanımlanamadı.
