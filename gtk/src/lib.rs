@@ -41,6 +41,7 @@ use std::{
         Arc,
     },
     thread::{self, JoinHandle},
+    time::Duration,
 };
 use yansi::Paint;
 
@@ -122,7 +123,7 @@ impl FirmwareWidget {
             ..set_no_show_all(true);
         };
 
-        let area = info_bar.get_content_area();
+        let area = info_bar.content_area();
         area.add(&info_bar_label);
 
         let stack = cascade! {
@@ -151,7 +152,7 @@ impl FirmwareWidget {
                 ..add(&stack);
                 ..set_can_default(true);
                 ..connect_key_press_event(move |_, event| {
-                    gtk::Inhibit(if event.get_keyval() == gdk::keys::constants::F5 {
+                    gtk::Inhibit(if event.keyval() == gdk::keys::constants::F5 {
                         let _ = sender.send(FirmwareEvent::Scan);
                         true
                     } else {
@@ -389,7 +390,7 @@ impl FirmwareWidget {
     fn connect_progress_events(rx_progress: Receiver<ActivateEvent>) {
         let mut active_widgets: HashSet<gtk::ProgressBar> = HashSet::new();
         let mut remove = Vec::new();
-        glib::timeout_add_local(100, move || {
+        glib::timeout_add_local(Duration::from_millis(100), move || {
             loop {
                 match rx_progress.try_recv() {
                     Ok(ActivateEvent::Activate(widget)) => {
@@ -415,7 +416,7 @@ impl FirmwareWidget {
             }
 
             for widget in &active_widgets {
-                let new_value = widget.get_fraction() + widget.get_pulse_step();
+                let new_value = widget.fraction() + widget.pulse_step();
                 widget.set_fraction(if new_value > 1.0 { 1.0 } else { new_value });
             }
 

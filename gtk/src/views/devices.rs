@@ -28,12 +28,12 @@ impl DevicesView {
             ..set_margin_bottom(12);
             ..set_selection_mode(gtk::SelectionMode::None);
             ..connect_row_activated(move |_, row| {
-                let widget = row.get_child()
+                let widget = row.child()
                     .and_then(|w| w.downcast::<gtk::Box>().ok())
-                    .and_then(|w| w.get_children().into_iter().next());
+                    .and_then(|w| w.children().into_iter().next());
 
                 if let Some(widget) = widget {
-                    let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
+                    let _ = widget.emit_by_name("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
                 }
             });
         };
@@ -44,23 +44,23 @@ impl DevicesView {
             ..set_no_show_all(true);
             ..set_selection_mode(gtk::SelectionMode::None);
             ..connect_row_activated(move |_, row| {
-                let widget = row.get_child()
+                let widget = row.child()
                     .and_then(|w| w.downcast::<gtk::Box>().ok())
-                    .and_then(|w| w.get_children().into_iter().next());
+                    .and_then(|w| w.children().into_iter().next());
 
                 if let Some(widget) = widget {
-                    let _ = widget.emit("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
+                    let _ = widget.emit_by_name("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
                 }
             });
             ..connect_key_press_event(move |listbox, event| {
                 gtk::Inhibit(
-                    if event.get_keyval() == gdk::keys::constants::Up {
-                        listbox.get_children()
+                    if event.keyval() == gdk::keys::constants::Up {
+                        listbox.children()
                             .into_iter()
                             .filter_map(|widget| widget.downcast::<gtk::ListBoxRow>().ok())
                             .next()
                             .and_then(|row| if row.has_focus() { upper.upgrade() } else { None })
-                            .and_then(|upper| upper.get_children().into_iter().last())
+                            .and_then(|upper| upper.children().into_iter().last())
                             .map_or(false, |child| {
                                 child.grab_focus();
                                 true
@@ -74,14 +74,14 @@ impl DevicesView {
 
         let lower = device_firmware.downgrade();
         system_firmware.connect_key_press_event(move |listbox, event| {
-            gtk::Inhibit(if event.get_keyval() == gdk::keys::constants::Down {
+            gtk::Inhibit(if event.keyval() == gdk::keys::constants::Down {
                 listbox
-                    .get_children()
+                    .children()
                     .into_iter()
                     .filter_map(|widget| widget.downcast::<gtk::ListBoxRow>().ok())
                     .last()
                     .and_then(|row| if row.has_focus() { lower.upgrade() } else { None })
-                    .and_then(|lower| lower.get_children().into_iter().next())
+                    .and_then(|lower| lower.children().into_iter().next())
                     .map_or(false, |child| {
                         child.grab_focus();
                         true
@@ -195,7 +195,7 @@ impl DevicesView {
     ///
     /// This is responsible for creating a device widget and assigning it to the given parent
     /// container.
-    fn append(&self, parent: &impl gtk::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
+    fn append(&self, parent: &impl gtk::traits::ContainerExt, info: &FirmwareInfo) -> DeviceWidget {
         let widget = DeviceWidget::new(info);
         self.sg.add_widget(&widget.event_box);
         parent.add(widget.as_ref());

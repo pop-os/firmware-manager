@@ -22,7 +22,7 @@ fn main() {
     let application = gtk::ApplicationBuilder::new().application_id(APP_ID).build();
 
     application.connect_activate(|app| {
-        if let Some(window) = app.get_window_by_id(0) {
+        if let Some(window) = app.window_by_id(0) {
             window.present();
         }
     });
@@ -76,9 +76,9 @@ fn main() {
             });
             ..connect_key_press_event(move |window, event| {
                 use gdk::keys::constants as key;
-                gtk::Inhibit(match event.get_keyval() {
-                    key::q if event.get_state().contains(gdk::ModifierType::CONTROL_MASK) => {
-                        let _ = window.emit("delete-event", &[&gdk::Event::new(gdk::EventType::Delete)]);
+                gtk::Inhibit(match event.keyval() {
+                    key::q if event.state().contains(gdk::ModifierType::CONTROL_MASK) => {
+                        let _ = window.emit_by_name("delete-event", &[&gdk::Event::new(gdk::EventType::Delete)]);
                         true
                     }
                     _ => false
@@ -87,7 +87,7 @@ fn main() {
         };
     });
 
-    application.run(&[]);
+    application.run();
 }
 
 /// Manages argument parsing for the GTK application via clap.
