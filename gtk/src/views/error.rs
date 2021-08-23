@@ -6,7 +6,9 @@ use gtk::prelude::*;
 pub struct EmptyView(gtk::Container);
 
 impl EmptyView {
-    pub fn new() -> Self { Self(error_view("firmware-manager-symbolic", &fl!("view-empty"))) }
+    pub fn new() -> Self {
+        Self(error_view("firmware-manager-symbolic", &fl!("view-empty")))
+    }
 }
 
 /// View displayed to users who lack administrative permissions.

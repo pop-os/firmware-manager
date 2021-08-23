@@ -54,10 +54,10 @@ pub(crate) enum ActivateEvent {
 
 /// The complete firmware manager, as a widget structure
 pub struct FirmwareWidget {
-    container:  gtk::Container,
-    sender:     Sender<FirmwareEvent>,
+    container: gtk::Container,
+    sender: Sender<FirmwareEvent>,
     background: Option<JoinHandle<()>>,
-    is_admin:   bool,
+    is_admin: bool,
 }
 
 /// An event which the GTK UI may propagate to the event loop in the main context.
@@ -206,7 +206,9 @@ impl FirmwareWidget {
     }
 
     /// Returns the primary container widget of this structure.
-    pub fn container(&self) -> &gtk::Container { self.container.upcast_ref::<gtk::Container>() }
+    pub fn container(&self) -> &gtk::Container {
+        self.container.upcast_ref::<gtk::Container>()
+    }
 
     /// The main event loop for this widget.
     ///
@@ -423,7 +425,9 @@ impl FirmwareWidget {
 }
 
 impl Default for FirmwareWidget {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Drop for FirmwareWidget {

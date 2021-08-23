@@ -17,7 +17,9 @@ pub fn sort_versions_reverse<V: Versioned>(input: &mut [V]) {
 }
 
 impl Versioned for fwupd_dbus::Release {
-    fn version(&self) -> &str { &self.version }
+    fn version(&self) -> &str {
+        &self.version
+    }
 }
 
 #[cfg(test)]
@@ -30,7 +32,9 @@ mod tests {
     }
 
     impl Versioned for Foo {
-        fn version(&self) -> &str { &self.version }
+        fn version(&self) -> &str {
+            &self.version
+        }
     }
 
     fn test_input() -> Vec<Foo> {

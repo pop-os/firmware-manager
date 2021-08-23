@@ -8,33 +8,33 @@ use std::sync::mpsc::Sender;
 /// Manages all state and state interactions with the UI.
 pub(crate) struct State {
     /// Components that have been associated with entities.
-    pub(crate) components:      Components,
+    pub(crate) components: Components,
     /// All devices will be created as an entity here
-    pub(crate) entities:        Entities,
+    pub(crate) entities: Entities,
     /// If this system has a battery.
-    pub(crate) has_battery:     bool,
+    pub(crate) has_battery: bool,
     /// Sends events to the progress signal
     pub(crate) progress_sender: Sender<ActivateEvent>,
     /// A sender to send firmware requests to the background thread
-    pub(crate) sender:          Sender<FirmwareEvent>,
+    pub(crate) sender: Sender<FirmwareEvent>,
     /// Events to be processed by the main event loop
-    pub(crate) ui_sender:       glib::Sender<Event>,
+    pub(crate) ui_sender: glib::Sender<Event>,
     /// Widgets that will be actively managed.
-    pub(crate) widgets:         Widgets,
+    pub(crate) widgets: Widgets,
 }
 
 /// GTK widgets that are interacted with throughout the lifetime of the firmware widget.
 pub(crate) struct Widgets {
     /// Controls the display of error messages.
-    pub(crate) info_bar:       gtk::InfoBar,
+    pub(crate) info_bar: gtk::InfoBar,
     /// Error messages will be set in this label.
     pub(crate) info_bar_label: gtk::Label,
     /// Controls which view to display in the UI
-    pub(crate) stack:          gtk::Stack,
+    pub(crate) stack: gtk::Stack,
     /// The devices view shows a list of all supported devices.
-    pub(crate) view_devices:   DevicesView,
+    pub(crate) view_devices: DevicesView,
     /// The empty view is displayed when a scan found no devices.
-    pub(crate) view_empty:     EmptyView,
+    pub(crate) view_empty: EmptyView,
 }
 
 /// Components are optional pieces of data that are assigned to entities
