@@ -6,14 +6,14 @@ use std::sync::{mpsc::Sender, Arc};
 
 /// An instance of the firmware update dialog specific to fwupd-managed system devices.
 pub struct FwupdDialog<'a> {
-    pub device:       &'a FwupdDevice,
-    pub entity:       Entity,
-    pub has_battery:  bool,
-    pub latest:       &'a str,
+    pub device: &'a FwupdDevice,
+    pub entity: Entity,
+    pub has_battery: bool,
+    pub latest: &'a str,
     pub needs_reboot: bool,
-    pub releases:     &'a [FwupdRelease],
-    pub sender:       &'a Sender<FirmwareEvent>,
-    pub widgets:      &'a DeviceWidget,
+    pub releases: &'a [FwupdRelease],
+    pub sender: &'a Sender<FirmwareEvent>,
+    pub widgets: &'a DeviceWidget,
 }
 
 impl<'a> FwupdDialog<'a> {

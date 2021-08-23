@@ -6,13 +6,13 @@ use std::sync::mpsc::Sender;
 
 /// An instance of the firmware update dialog specific to system76-managed system devices.
 pub struct System76Dialog<'a> {
-    pub changelog:   &'a System76Changelog,
-    pub digest:      &'a System76Digest,
-    pub entity:      Entity,
+    pub changelog: &'a System76Changelog,
+    pub digest: &'a System76Digest,
+    pub entity: Entity,
     pub has_battery: bool,
-    pub latest:      &'a str,
-    pub sender:      &'a Sender<FirmwareEvent>,
-    pub widgets:     &'a DeviceWidget,
+    pub latest: &'a str,
+    pub sender: &'a Sender<FirmwareEvent>,
+    pub widgets: &'a DeviceWidget,
 }
 
 impl<'a> System76Dialog<'a> {
