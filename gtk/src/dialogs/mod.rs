@@ -53,7 +53,7 @@ impl FirmwareUpdateDialog {
             gtk::ButtonBuilder::new()
                 .label(&fl!("button-reboot-and-install"))
                 .build();
-            ..get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
+            ..style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
 
         let dialog = gtk::DialogBuilder::new()
@@ -66,7 +66,7 @@ impl FirmwareUpdateDialog {
             .build();
 
         let headerbar = dialog
-            .get_header_bar()
+            .header_bar()
             .expect("dialog generated without header bar")
             .downcast::<gtk::HeaderBar>()
             .expect("dialog header bar is not a header bar");
@@ -85,7 +85,7 @@ impl FirmwareUpdateDialog {
         };
 
         cascade! {
-            dialog.get_content_area();
+            dialog.content_area();
             ..set_orientation(gtk::Orientation::Horizontal);
             ..set_border_width(12);
             ..set_spacing(12);

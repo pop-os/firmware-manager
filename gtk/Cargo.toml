@@ -15,10 +15,10 @@ cascade = "1.0"
 clap = "2.33"
 fern = "0.6"
 firmware-manager = { path = "../" }
-gdk = "0.13"
-gio = "0.9"
-glib = "0.10"
-gtk = { version = "0.9", features = [ "v3_22" ] }
+gdk = "0.14"
+gio = "0.14"
+glib = "0.14"
+gtk = { version = "0.14", features = [ "v3_22" ] }
 html2runes = "1.0"
 log = "0.4"
 shrinkwraprs = "0.3"
