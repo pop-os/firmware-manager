@@ -106,18 +106,26 @@ pub struct Entities {
 
 impl Entities {
     /// Associate this entity as a system device
-    pub fn associate_system(&mut self, entity: Entity) { self.system.insert(entity, ()); }
+    pub fn associate_system(&mut self, entity: Entity) {
+        self.system.insert(entity, ());
+    }
 
     /// Clear all entities from the world
     ///
     /// Entities are automatically erased from secondary storages on lookup
-    pub fn clear(&mut self) { self.entities.clear(); }
+    pub fn clear(&mut self) {
+        self.entities.clear();
+    }
 
     /// Create a new device entity.
-    pub fn create(&mut self) -> Entity { self.entities.insert(()) }
+    pub fn create(&mut self) -> Entity {
+        self.entities.insert(())
+    }
 
     /// Check if an entity is a system device
-    pub fn is_system(&self, entity: Entity) -> bool { self.system.contains_key(entity) }
+    pub fn is_system(&self, entity: Entity) -> bool {
+        self.system.contains_key(entity)
+    }
 }
 
 /// Signals that the firmware manager core will send to a frontend.
@@ -266,13 +274,19 @@ fn read_trimmed(path: &str) -> io::Result<String> {
 }
 
 /// Convenience function for reading the product name from the DMI ID information.
-fn product_name() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/product_name") }
+fn product_name() -> io::Result<String> {
+    read_trimmed("/sys/class/dmi/id/product_name")
+}
 
 /// Convenience function for reading the product version from the DMI ID information.
-fn product_version() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/product_version") }
+fn product_version() -> io::Result<String> {
+    read_trimmed("/sys/class/dmi/id/product_version")
+}
 
 /// Convenience function for reading the system vendor from the DMI ID information.
-fn sys_vendor() -> io::Result<String> { read_trimmed("/sys/class/dmi/id/sys_vendor") }
+fn sys_vendor() -> io::Result<String> {
+    read_trimmed("/sys/class/dmi/id/sys_vendor")
+}
 
 /// Creates a string identifying system firmware by the board vendor and name.
 pub(crate) fn system_board_identity() -> io::Result<String> {

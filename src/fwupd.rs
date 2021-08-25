@@ -8,13 +8,13 @@ use std::cmp::Ordering;
 #[derive(Debug)]
 pub struct FwupdSignal {
     /// Generic information about the firmware.
-    pub info:        FirmwareInfo,
+    pub info: FirmwareInfo,
     /// Information specific to fwupd devices.
-    pub device:      FwupdDevice,
+    pub device: FwupdDevice,
     /// Tracks whether the firmware is upgradeable or not.
     pub upgradeable: bool,
     /// All releases that were found for the firmware.
-    pub releases:    Vec<FwupdRelease>,
+    pub releases: Vec<FwupdRelease>,
 }
 
 /// Scan for supported devices from the fwupd DBus daemon.
@@ -40,9 +40,9 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 
                     sender(FirmwareSignal::Fwupd(FwupdSignal {
                         info: FirmwareInfo {
-                            name:             [&device.vendor, " ", &device.name].concat().into(),
-                            current:          device.version.clone(),
-                            latest:           Some(latest.version.clone()),
+                            name: [&device.vendor, " ", &device.name].concat().into(),
+                            current: device.version.clone(),
+                            latest: Some(latest.version.clone()),
                             install_duration: latest.install_duration,
                         },
                         device,

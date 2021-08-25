@@ -12,12 +12,12 @@ use std::num::NonZeroU8;
 #[derive(Shrinkwrap)]
 pub struct DevicesView {
     #[shrinkwrap(main_field)]
-    container:       gtk::Container,
+    container: gtk::Container,
     device_firmware: gtk::ListBox,
-    device_header:   gtk::Label,
-    sg:              gtk::SizeGroup,
+    device_header: gtk::Label,
+    sg: gtk::SizeGroup,
     system_firmware: gtk::ListBox,
-    system_header:   gtk::Label,
+    system_header: gtk::Label,
 }
 
 impl DevicesView {
