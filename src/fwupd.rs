@@ -76,7 +76,7 @@ pub fn fwupd_updates(client: &FwupdClient) -> Result<(), fwupd_dbus::Error> {
         }
 
         // NOTE: This attribute is required due to a clippy bug.
-        #[allow(clippy::identity_conversion)]
+        #[allow(clippy::useless_conversion)]
         for remote in client.remotes()? {
             if !remote.enabled {
                 continue;

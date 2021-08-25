@@ -309,8 +309,8 @@ fn lowest_revision<'a, I: IntoIterator<Item = &'a str>>(list: I) -> &'a str {
     match list.next() {
         Some(mut lowest_revision) => {
             for rev in list {
-                if human_sort::compare(lowest_revision, &rev) == Ordering::Greater {
-                    lowest_revision = &rev;
+                if human_sort::compare(lowest_revision, rev) == Ordering::Greater {
+                    lowest_revision = rev;
                 }
             }
             lowest_revision

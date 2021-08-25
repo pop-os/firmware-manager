@@ -32,7 +32,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
             name,
             current: current.version,
             latest: info.as_ref().map(|(_, changelog)| {
-                changelog.versions.iter().next().expect("empty changelog").bios.clone()
+                changelog.versions.get(0).expect("empty changelog").bios.clone()
             }),
             install_duration: 1,
         };

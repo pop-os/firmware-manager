@@ -10,7 +10,7 @@ pub fn user_is_admin() -> bool {
 fn user_in_admin_group(user: &std::ffi::OsStr) -> bool {
     let in_group = |name| {
         users::get_group_by_name(name).map_or(false, |group| {
-            group.members().into_iter().any(|member| member.as_os_str() == user)
+            group.members().iter().any(|member| member.as_os_str() == user)
         })
     };
 
