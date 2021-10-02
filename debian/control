@@ -16,7 +16,7 @@ Standards-Version: 4.1.4
 Homepage: https://github.com/pop-os/firmware-manager
 
 Package: firmware-manager
-Architecture: amd64
+Architecture: amd64 arm64
 Depends:
   firmware-manager-shared,
   ${misc:Depends},
@@ -26,7 +26,7 @@ Description: Firmware Manager application
  GTK application for managing system and device firmware.
 
 Package: firmware-manager-notify
-Architecture: amd64
+Architecture: amd64 arm64
 Depends:
   dbus,
   ${misc:Depends},
@@ -44,7 +44,7 @@ Description: Files and dependencies shared between firmware-manager and libfirmw
  Files shared between firmware-manager and libfirmware-manager installs
 
 Package: libfirmware-manager
-Architecture: amd64
+Architecture: amd64 arm64
 Depends:
   firmware-manager-shared,
   ${misc:Depends},
