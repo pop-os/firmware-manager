@@ -100,7 +100,7 @@ impl DeviceWidget {
                 dropdown_image_.upgrade()
                     .expect("dropdown image did not exist")
                     .set_from_icon_name(
-                        Some(if revealer.is_child_revealed() {
+                        Some(if revealer.reveals_child() {
                             "pan-down-symbolic"
                         } else {
                             "pan-end-symbolic"
