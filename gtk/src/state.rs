@@ -332,7 +332,7 @@ fn reveal<F: FnMut() -> gtk::Container>(
     entity: Entity,
     mut func: F,
 ) {
-    let reveal = if revealer.is_child_revealed() {
+    let reveal = if revealer.reveals_child() {
         false
     } else {
         // If the content to be revealed has not been generated yet, do so.
