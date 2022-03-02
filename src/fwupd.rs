@@ -44,6 +44,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
                             current: device.version.clone(),
                             latest: Some(latest.version.clone()),
                             install_duration: latest.install_duration,
+                            update_message:   latest.update_message.clone(),
                         },
                         device,
                         upgradeable,

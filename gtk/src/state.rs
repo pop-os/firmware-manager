@@ -49,6 +49,9 @@ pub(crate) struct Components {
     /// The latest version associated with a device, if one exists.
     pub(crate) latest: SecondaryMap<Entity, Box<str>>,
 
+    /// A message that should be displayed after a successful upgrade.
+    pub(crate) update_message: SecondaryMap<Entity, Box<str>>,
+
     /// Details about a fwupd device
     pub(crate) fwupd: SparseSecondaryMap<Entity, (FwupdDevice, Vec<FwupdRelease>)>,
 
@@ -107,6 +110,12 @@ impl State {
                 crate::reboot();
             }
 
+            if let Some(message) = self.components.update_message.remove(entity) {
+                self.widgets.info_bar.set_visible(true);
+                self.widgets.info_bar.set_message_type(gtk::MessageType::Info);
+                self.widgets.info_bar_label.set_text(&*message);
+            }
+
             // Wait 1 second before changing the visibility of the stack.
             let sender = self.ui_sender.clone();
             glib::timeout_add_seconds_local(1, move || {
@@ -140,6 +149,10 @@ impl State {
                         let _ = sender.send(Event::Ui(UiEvent::Update(entity)));
                     });
                 }
+            }
+
+            if let Some(update_message) = info.update_message {
+                state.components.update_message.insert(entity, update_message);
             }
 
             let sender = state.ui_sender.clone();
