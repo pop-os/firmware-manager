@@ -31,24 +31,10 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
 
     for device in devices {
         if device.is_supported() {
-            match fwupd.releases(&device) {
+            let releases = match fwupd.releases(&device) {
                 Ok(mut releases) => {
                     crate::sort_versions(&mut releases);
-
-                    let latest = releases.iter().last().expect("no releases");
-                    let upgradeable = is_newer(&device.version, &latest.version);
-
-                    sender(FirmwareSignal::Fwupd(FwupdSignal {
-                        info: FirmwareInfo {
-                            name: [&device.vendor, " ", &device.name].concat().into(),
-                            current: device.version.clone(),
-                            latest: Some(latest.version.clone()),
-                            install_duration: latest.install_duration,
-                        },
-                        device,
-                        upgradeable,
-                        releases,
-                    }));
+                    releases
                 }
                 Err(why) => {
                     error!(
@@ -56,8 +42,30 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
                         device.name,
                         super::format_error(why)
                     );
+
+                    Vec::new()
                 }
-            }
+            };
+
+            let latest = releases.iter().last();
+            let upgradeable = latest.map_or(false, |latest| {
+                is_newer(&device.version, &latest.version)
+            });
+            let install_duration = latest.map_or(0, |latest| {
+                latest.install_duration
+            });
+
+            sender(FirmwareSignal::Fwupd(FwupdSignal {
+                info: FirmwareInfo {
+                    name: [&device.vendor, " ", &device.name].concat().into(),
+                    current: device.version.clone(),
+                    latest: latest.map(|latest| latest.version.clone()),
+                    install_duration,
+                },
+                device,
+                upgradeable,
+                releases,
+            }));
         }
     }
 
