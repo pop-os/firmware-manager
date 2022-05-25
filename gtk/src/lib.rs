@@ -252,6 +252,7 @@ impl FirmwareWidget {
                 }
                 // An event that occurs when firmware has successfully updated.
                 Firmware(DeviceUpdated(entity)) => {
+                    state.widgets.info_bar.set_visible(false);
                     firmware_flashing.store(false, Ordering::SeqCst);
                     let latest = state.components.latest.remove(entity);
                     state.device_updated(entity, latest.expect("updated device without version"))
@@ -274,6 +275,11 @@ impl FirmwareWidget {
                     let progress = &mut state.components.firmware_download[entity];
                     progress.0 += downloaded as u64;
                     widget.stack.progress.set_fraction(progress.0 as f64 / progress.1 as f64);
+                }
+                // Device has requested interaction.
+                Firmware(DeviceRequest(message)) => {
+                    state.widgets.info_bar.set_visible(true);
+                    state.widgets.info_bar_label.set_text(message.as_str());
                 }
                 // An error occurred in the background thread, which we shall display in the UI.
                 Firmware(Error(entity, why)) => {
@@ -369,11 +375,22 @@ impl FirmwareWidget {
         receiver: Receiver<FirmwareEvent>,
         sender: glib::Sender<Event>,
     ) -> JoinHandle<()> {
-        thread::spawn(move || {
-            firmware_manager::event_loop(receiver, |event| {
-                let _ = sender.send(Event::Firmware(event));
-            });
+        let (tx, rx) = std::sync::mpsc::channel::<FirmwareSignal>();
 
+        thread::spawn({
+            let sender = sender.clone();
+            move || {
+                for message in rx {
+                    if sender.send(Event::Firmware(message)).is_err() {
+                        break
+                    }
+                }
+            }
+        });
+
+
+        thread::spawn(move || {
+            firmware_manager::event_loop(receiver, tx);
             info!("firmware manager event loop stopped");
             let _ = sender.send(Event::Stop);
         })

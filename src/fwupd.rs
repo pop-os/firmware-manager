@@ -2,7 +2,7 @@
 
 use crate::{FirmwareInfo, FirmwareSignal};
 use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::mpsc::Sender};
 
 /// A signal sent when a fwupd-compatible device has been discovered.
 #[derive(Debug)]
@@ -18,13 +18,13 @@ pub struct FwupdSignal {
 }
 
 /// Scan for supported devices from the fwupd DBus daemon.
-pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
+pub fn fwupd_scan(fwupd: &FwupdClient, sender: Sender<FirmwareSignal>) {
     info!("scanning fwupd devices");
 
     let devices = match fwupd.devices() {
         Ok(devices) => devices,
         Err(why) => {
-            sender(FirmwareSignal::Error(None, why.into()));
+            let _res = sender.send(FirmwareSignal::Error(None, why.into()));
             return;
         }
     };
@@ -55,7 +55,7 @@ pub fn fwupd_scan<F: Fn(FirmwareSignal)>(fwupd: &FwupdClient, sender: F) {
                 latest.install_duration
             });
 
-            sender(FirmwareSignal::Fwupd(FwupdSignal {
+            let _res = sender.send(FirmwareSignal::Fwupd(FwupdSignal {
                 info: FirmwareInfo {
                     name: [&device.vendor, " ", &device.name].concat().into(),
                     current: device.version.clone(),
