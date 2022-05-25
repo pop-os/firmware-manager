@@ -35,23 +35,10 @@ fn main() {
         },
     );
 
-    let event_handler = |event: FirmwareSignal| match event {
-        FirmwareSignal::Fwupd(FwupdSignal { upgradeable, .. }) => {
-            if upgradeable {
-                notify();
-            }
-        }
-        FirmwareSignal::S76System(info, ..) | FirmwareSignal::ThelioIo(info, ..) => {
-            if info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())
-            {
-                notify();
-            }
-        }
-        _ => (),
-    };
+    let (tx, rx) = std::sync::mpsc::channel();
 
     if let Some(ref client) = s76 {
-        s76_scan(client, &event_handler);
+        s76_scan(client, tx.clone());
     }
 
     if let Some(ref client) = fwupd {
@@ -59,7 +46,24 @@ fn main() {
             eprintln!("{}: {}", fl!("error-fwupd"), why);
         }
 
-        fwupd_scan(client, &event_handler);
+        fwupd_scan(client, tx);
+    }
+
+    for message in rx {
+        match message {
+            FirmwareSignal::Fwupd(FwupdSignal { upgradeable, .. }) => {
+                if upgradeable {
+                    notify();
+                }
+            }
+            FirmwareSignal::S76System(info, ..) | FirmwareSignal::ThelioIo(info, ..) => {
+                if info.latest.as_ref().map_or(false, |latest| latest.as_ref() != info.current.as_ref())
+                {
+                    notify();
+                }
+            }
+            _ => (),
+        }
     }
 }
 

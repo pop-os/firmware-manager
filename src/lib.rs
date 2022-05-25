@@ -39,7 +39,7 @@ use slotmap::{SlotMap, SparseSecondaryMap};
 use std::{
     io,
     process::Command,
-    sync::{mpsc::Receiver, Arc},
+    sync::{mpsc::{Receiver, Sender}, Arc, atomic::{AtomicBool, Ordering}},
 };
 pub use system76_firmware_daemon::Client as System76Client;
 
@@ -142,6 +142,9 @@ pub enum FirmwareSignal {
     /// A device was updated
     DeviceUpdated(Entity),
 
+    /// A device has a request for user interaction.
+    DeviceRequest(String),
+
     /// Signals that the entity's firmware is being downloaded.
     DownloadBegin(Entity, u64),
 
@@ -175,7 +178,9 @@ pub enum FirmwareSignal {
 
 /// An event loop that should be run in the background, as this function will block until
 /// the stop signal is received.
-pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, sender: F) {
+pub fn event_loop(receiver: Receiver<FirmwareEvent>, sender: Sender<FirmwareSignal>) {
+    let cancellable = Arc::new(AtomicBool::new(true));
+
     let s76 = get_client("system76", s76_firmware_is_active, System76Client::new);
 
     let fwupd = {
@@ -183,6 +188,26 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
         let fwupd_connect = || {
             let client = FwupdClient::new()?;
             client.ping()?;
+
+            let _res = client.set_feature_flags(fwupd_dbus::FeatureFlags::REQUESTS);
+
+            std::thread::spawn({
+                let sender = sender.clone();
+                let cancellable = cancellable.clone();
+                move || {
+                    if let Ok(client) = FwupdClient::new() {
+                        if let Ok(signals) = client.listen_signals(cancellable) {
+                            for signal in signals {
+                                if let fwupd_dbus::Signal::DeviceRequest(request) = dbg!(signal) {
+                                    let message = FirmwareSignal::DeviceRequest(request.update_message);
+                                    let _res = sender.send(message);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
             Ok(client)
         };
 
@@ -194,20 +219,21 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
         match event {
             FirmwareEvent::Scan => {
                 let sender = &sender;
-                sender(FirmwareSignal::Scanning);
+                let _res = sender.send(FirmwareSignal::Scanning);
 
                 if let Some(ref client) = s76 {
-                    s76_scan(client, sender);
+                    s76_scan(client, sender.clone());
                 }
 
                 if let Some(ref client) = fwupd {
                     if let Err(why) = fwupd_updates(client) {
                         eprintln!("failed to update fwupd remotes: {}", why);
                     }
-                    fwupd_scan(client, sender);
+
+                    fwupd_scan(client, sender.clone());
                 }
 
-                let _ = sender(FirmwareSignal::ScanningComplete);
+                let _ = sender.send(FirmwareSignal::ScanningComplete);
             }
             FirmwareEvent::Fwupd(entity, device, release) => {
                 let flags = fwupd_dbus::InstallFlags::empty();
@@ -230,7 +256,7 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                                 VerifyingChecksum => return,
                             };
 
-                            sender(event);
+                            let _res = sender.send(event);
                         }),
                     )
                 }) {
@@ -239,24 +265,26 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
                     None => panic!("fwupd event assigned to non-fwupd button"),
                 };
 
-                sender(event);
+                let _res = sender.send(event);
             }
             FirmwareEvent::S76System(entity, digest) => {
-                match s76.as_ref().map(|client| client.schedule(&digest)) {
-                    Some(Ok(_)) => sender(FirmwareSignal::SystemScheduled),
-                    Some(Err(why)) => sender(FirmwareSignal::Error(Some(entity), why.into())),
+                let signal = match s76.as_ref().map(|client| client.schedule(&digest)) {
+                    Some(Ok(_)) => FirmwareSignal::SystemScheduled,
+                    Some(Err(why)) => FirmwareSignal::Error(Some(entity), why.into()),
                     None => panic!("thelio event assigned to non-thelio button"),
-                }
+                };
+
+                let _res = sender.send(signal);
             }
             FirmwareEvent::ThelioIo(entity, digest) => {
-                sender(FirmwareSignal::DeviceFlashing(entity));
+                let _res = sender.send(FirmwareSignal::DeviceFlashing(entity));
                 let event = match s76.as_ref().map(|client| client.thelio_io_update(&digest)) {
                     Some(Ok(_)) => FirmwareSignal::DeviceUpdated(entity),
                     Some(Err(why)) => FirmwareSignal::Error(Some(entity), why.into()),
                     None => panic!("thelio event assigned to non-thelio button"),
                 };
 
-                sender(event);
+                let _res = sender.send(event);
             }
             FirmwareEvent::Stop => {
                 trace!("received quit signal");
@@ -264,6 +292,8 @@ pub fn event_loop<F: Fn(FirmwareSignal)>(receiver: Receiver<FirmwareEvent>, send
             }
         }
     }
+
+    cancellable.store(false, Ordering::SeqCst);
 }
 
 /// Function for getting a timmed string from a file.
@@ -323,8 +353,8 @@ fn lowest_revision<'a, I: IntoIterator<Item = &'a str>>(list: I) -> &'a str {
     match list.next() {
         Some(mut lowest_revision) => {
             for rev in list {
-                if human_sort::compare(lowest_revision, &rev) == Ordering::Greater {
-                    lowest_revision = &rev;
+                if human_sort::compare(lowest_revision, rev) == Ordering::Greater {
+                    lowest_revision = rev;
                 }
             }
             lowest_revision

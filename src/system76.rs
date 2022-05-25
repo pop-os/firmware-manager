@@ -1,13 +1,13 @@
 //! Functions specific to working with system76 firmware.
 
 use crate::{lowest_revision, FirmwareInfo, FirmwareSignal};
-use std::error::Error as _;
+use std::{error::Error as _, sync::mpsc::Sender};
 use system76_firmware_daemon::{
     Client as System76Client, SystemInfo as S76SystemInfo, ThelioIoInfo,
 };
 
 /// Scan for available System76 firmware
-pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
+pub fn s76_scan(client: &System76Client, sender: Sender<FirmwareSignal>) {
     info!("scanning for system76 devices");
 
     // Thelio system firmware check.
@@ -37,7 +37,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
             install_duration: 1,
         };
 
-        sender(FirmwareSignal::S76System(fw, info));
+        let _res = sender.send(FirmwareSignal::S76System(fw, info));
     }
 
     info!("scanning for Thelio I/O devices");
@@ -78,7 +78,7 @@ pub fn s76_scan<F: Fn(FirmwareSignal)>(client: &System76Client, sender: F) {
     };
 
     if let Some(event) = event {
-        sender(event);
+        let _res = sender.send(event);
     }
 
     info!("finished scanning for system76 devices")
