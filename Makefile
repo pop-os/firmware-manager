@@ -20,8 +20,8 @@ endif
 
 VENDOR ?= 0
 ifneq ($(VENDOR),0)
-	ARGS += --frozen
-	DESKTOP_ARGS += --frozen
+	ARGS += --frozen --offline
+	DESKTOP_ARGS += --frozen --offline
 endif
 
 APPID = com.system76.FirmwareManager
