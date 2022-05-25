@@ -8,20 +8,20 @@ edition = "2018"
 members = [ "gtk", "gtk/ffi", "notify", "tools" ]
 
 [dependencies]
-better-panic = "0.2.0"
-futures = "0.3"
+better-panic = "0.3.0"
+futures = "0.3.21"
 fwupd-dbus = "0.2.2"
 human-sort = "0.2.2"
-log = "0.4.8"
+log = "0.4.17"
 shrinkwraprs = "0.3.0"
 system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware" }
-thiserror = "1.0"
-tokio = { version = "1.5.0", features = ["rt"] }
-tokio-udev = "0.6"
-users = "0.11"
-xdg = "2.2.0"
-i18n-embed = { version = "0.12.0", features = ["fluent-system", "desktop-requester"] }
-i18n-embed-fl = "0.5.0"
-rust-embed = "5.9.0"
-once_cell = "1.7.2"
-slotmap = "0.4"
+thiserror = "1.0.31"
+tokio = { version = "1.18.2", features = ["rt"] }
+tokio-udev = "0.6.0"
+users = "0.11.0"
+xdg = "2.4.1"
+i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.6.4"
+rust-embed = "6.4.0"
+once_cell = "1.12.0"
+slotmap = "1.0.6"
