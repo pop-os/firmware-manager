@@ -14,11 +14,10 @@ pub fn generate_widget_none() -> gtk::Box {
         .build()
 }
 
-pub fn generate_widget<I, S, X>(changelog: I) -> gtk::Box
+pub fn generate_widget<I, S>(changelog: I) -> gtk::Box
 where
     S: AsRef<str>,
-    X: AsRef<str>,
-    I: Iterator<Item = (S, X)>,
+    I: Iterator<Item = (S, S, S)>,
 {
     let changelog_entries = cascade! {
         gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -26,7 +25,7 @@ where
     };
 
     let mut initiated = false;
-    changelog.for_each(|(version, entry)| {
+    changelog.for_each(|(version, date, entry)| {
         let markdown = if entry.as_ref().is_empty() {
             fl!("changelog-unavailable")
         } else {
@@ -39,8 +38,14 @@ where
 
         const PADDING: i32 = 48;
 
+        let version_label = if !date.as_ref().is_empty() {
+            format!("<b>{}</b> ({})", version.as_ref(), date.as_ref())
+        } else {
+            format!("<b>{}</b>", version.as_ref())
+        };
+
         let version = gtk::Label::builder()
-            .label(&*format!("<b>{}</b>", version.as_ref()))
+            .label(&version_label)
             .use_markup(true)
             .xalign(0.0)
             .max_width_chars(40)
