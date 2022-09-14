@@ -176,7 +176,8 @@ impl State {
                 let log_entries = releases
                     .iter()
                     .rev()
-                    .map(|release| (release.version.as_ref(), release.description.as_ref()));
+                    // TODO: Add release date
+                    .map(|release| (release.version.as_ref(), "", release.description.as_ref()));
 
                 crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
             });
@@ -189,6 +190,7 @@ impl State {
                 let log_entries = changelog.versions.iter().map(|version| {
                     (
                         version.bios.as_ref(),
+                        version.date.as_ref(),
                         version.description.as_ref(),
                     )
                 });

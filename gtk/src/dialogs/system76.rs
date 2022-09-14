@@ -18,7 +18,7 @@ pub struct System76Dialog<'a> {
 impl<'a> System76Dialog<'a> {
     pub fn run(self) {
         let log_entries = self.changelog.versions.iter().map(|version| {
-            (version.bios.as_ref(), version.description.as_ref())
+            (version.bios.as_ref(), version.date.as_ref(), version.description.as_ref())
         });
 
         let dialog = FirmwareUpdateDialog::new(self.latest, log_entries, self.has_battery);
