@@ -14,8 +14,6 @@ header-system-firmware = Sistem Yazılımı
 header-device-firmware = Aygıt Yazılımı
 header-firmware-update = Aygıt Yazılımı Güncellemesi
 
-not-applicable = Uygulanamaz
-
 update-available = Aygıt yazılımı güncellemesi {$version} mevcut.
 
 update-connect-to-ac = Bilgisayarınızı şarja takın. Aygıt yazılımı güncellemelerinde <b>USB Type-C</b> desteklenmez.

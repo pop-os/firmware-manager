@@ -14,8 +14,6 @@ header-system-firmware = 시스템 펌웨어
 header-device-firmware = 기기 펌웨어
 header-firmware-update = 펌웨어 업데이트
 
-not-applicable = N/A
-
 update-available = 새 펌워어(버전 {$version})으로 업데이트 가능합니다.
 
 update-connect-to-ac = 컴퓨터를 전원에 연결하세요. 펌웨어 업데이트 동안은 <b>USB Type-C</b> 충전이 불가능합니다.

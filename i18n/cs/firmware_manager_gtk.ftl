@@ -14,8 +14,6 @@ header-system-firmware = Firmware systému
 header-device-firmware = Firmware zařízení
 header-firmware-update = Aktualizace firmwaru
 
-not-applicable = N/A
-
 update-available = Je k dizpozici firmware verze {$version}.
 
 update-connect-to-ac = Připojte zařízení do elektřiny. Nabíjení pomocí <b>USB typu C</b> není podporováno během aktualizace firmwaru.

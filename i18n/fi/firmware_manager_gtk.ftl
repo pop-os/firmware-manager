@@ -14,8 +14,6 @@ header-system-firmware = Järjestelmän laiteohjelmisto
 header-device-firmware = Laitteen laiteohjelmisto
 header-firmware-update = Laiteohjelmiston päivitys
 
-not-applicable = N/A
-
 update-available = Laiteohjelmiston versio {$version} on saatavilla.
 
 update-connect-to-ac = Liitä tietokoneesi virtalähteeseen. <b>USB Type-C</b> ei ole tuettu laiteohjelmiston päivityksessä.

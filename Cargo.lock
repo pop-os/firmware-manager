@@ -3521,8 +3521,8 @@ dependencies = [
 
 [[package]]
 name = "system76-firmware"
-version = "1.0.44"
-source = "git+https://github.com/pop-os/system76-firmware#10e1ad5f141d91cb56e4ec15f9dd94524a66944a"
+version = "1.0.45"
+source = "git+https://github.com/pop-os/system76-firmware#aa55ba8726d57edd816c2769212d57044141b4bb"
 dependencies = [
  "anyhow",
  "bincode",
@@ -3544,7 +3544,7 @@ dependencies = [
 [[package]]
 name = "system76-firmware-daemon"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/system76-firmware#10e1ad5f141d91cb56e4ec15f9dd94524a66944a"
+source = "git+https://github.com/pop-os/system76-firmware#aa55ba8726d57edd816c2769212d57044141b4bb"
 dependencies = [
  "dbus 0.9.6",
  "dbus-crossroads",

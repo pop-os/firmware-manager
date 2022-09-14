@@ -14,8 +14,6 @@ header-system-firmware = Sistemska vdelana programska oprema
 header-device-firmware = Vdelana programska oprema naprave
 header-firmware-update = Posodobitev vdelane programske opreme
 
-not-applicable = N/A
-
 update-available = Na voljo je različica vdelane programske opreme {$version}.
 
 update-connect-to-ac = Priključite računalnik na napajanje. Polnjenje <b>USB-ja tipa C</b> za posodobitve vdelane programske opreme ni podprto.

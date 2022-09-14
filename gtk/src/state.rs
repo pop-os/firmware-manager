@@ -189,10 +189,7 @@ impl State {
                 let log_entries = changelog.versions.iter().map(|version| {
                     (
                         version.bios.as_ref(),
-                        version.description.as_ref().map_or_else(
-                            || fl!("not-applicable"),
-                            |desc| String::from(desc.as_ref()),
-                        ),
+                        version.description.as_ref(),
                     )
                 });
 

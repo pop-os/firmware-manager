@@ -13,8 +13,6 @@ header-system-firmware = Oprogramowanie Wbudowane Systemu
 header-device-firmware = Oprogramowanie Wbudowane Urządzenia
 header-firmware-update = Aktualizacja Oprogramowania Wbudowanego
 
-not-applicable = nie można zastosować
-
 update-available = Wersja Oprogramowania Wbudowanego {$version} jest dostępna.
 
 update-connect-to-ac = Podłącz komputer do zasilania. Ładowanie <b>USB Type-C</b> nie jest wspierane dla aktualizacji oprogramowania wbudowanego.
