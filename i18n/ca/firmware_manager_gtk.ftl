@@ -14,8 +14,6 @@ header-system-firmware = Firmware del sistema
 header-device-firmware = Firmware del dispositiu
 header-firmware-update = Actualitzar el firmware
 
-not-applicable = N/A
-
 update-available = La versió {$version} de firmware està disponible.
 
 update-connect-to-ac = Posi a carregar el seu ordinador. La càrrega mitjançant <b>USB Type-C</b> no està suportada.

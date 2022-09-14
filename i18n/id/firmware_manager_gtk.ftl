@@ -14,8 +14,6 @@ header-system-firmware = Firmware Sistem
 header-device-firmware = Firmware Perangkat
 header-firmware-update = Pembaruan Firmware
 
-not-applicable = N/A
-
 update-available = Firmware baru dengan versi {$version} tersedia.
 
 update-connect-to-ac = Hubungkan ke pengisi daya. Pengisian daya menggunakan <b>USB Type-C</b> tidak didukung saat proses pembaruan.

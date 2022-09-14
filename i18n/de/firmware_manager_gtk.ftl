@@ -14,8 +14,6 @@ header-system-firmware = Systemfirmware
 header-device-firmware = Gerätefirmware
 header-firmware-update = Firmwareaktualisierung
 
-not-applicable = N. V.
-
 update-available = Firmwareversion {$version} ist verfügbar.
 
 update-connect-to-ac = Schließen Sie Ihren Computer an die Stromversorgung an. Aufladen über <b>USB Typ C</b> wird für Firmwareaktualisierungen nicht unterstützt.

@@ -14,8 +14,6 @@ header-system-firmware = Rendszerfirmware
 header-device-firmware = Eszközfirmware
 header-firmware-update = Firmware-frissítés
 
-not-applicable = N/A
-
 update-available = A {$version} verziószámú firmware elérhető.
 
 update-connect-to-ac = Csatlakoztasd a számítógépet hálózati áramforráshoz. <b>USB Type-C</b> csatlakozón keresztüli töltés nem támogatott firmware-frissítés alatt.

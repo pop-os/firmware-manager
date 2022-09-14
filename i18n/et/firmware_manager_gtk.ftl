@@ -14,8 +14,6 @@ header-system-firmware = Süsteemi Püsivara
 header-device-firmware = Seadme(te) Püsivara
 header-firmware-update = Püsivara Uuendus
 
-not-applicable = N/A
-
 update-available = Püsivara versioon {$version} on saadaval.
 
 update-connect-to-ac = Ühenda oma arvuti vooluvõrku. <b>USB C</b> laadimine ei ole püsivara uuendusteks toetatud.

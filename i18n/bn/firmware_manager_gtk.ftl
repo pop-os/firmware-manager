@@ -14,8 +14,6 @@ header-system-firmware = সিস্টেম ফার্মওয়্যা
 header-device-firmware = ডিভাইস ফার্মওয়্যার
 header-firmware-update = ফার্মওয়্যার আপডেট	
 
-not-applicable = N/A
-
 update-available = নতুন ফার্মওয়্যার ভার্সন {$version} উপলব্ধ।
 
 update-connect-to-ac = আপনার কম্পিউটারকে পাওয়ারের সাথে সংযুক্ত করুন । ফার্মওয়্যার আপডেটের সময় <b>টাইপ সি<b> চার্জিং সাপোর্ট করে না।

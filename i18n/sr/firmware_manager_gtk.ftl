@@ -14,8 +14,6 @@ header-system-firmware = Sistemski firmver
 header-device-firmware = Firmver uređaja
 header-firmware-update = Firmver ažuriranje
 
-not-applicable = N/A
-
 update-available = Firmver verzija {$version} je dostupna.
 
 update-connect-to-ac = Povežite Vaš računar sa izvorom napajanja. <b>USB Tip-C</b> punjenje nije podržano za firmver ažuriranja.

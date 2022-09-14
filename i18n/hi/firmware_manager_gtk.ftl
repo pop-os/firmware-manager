@@ -14,8 +14,6 @@ header-system-firmware = सिस्टम फर्मवेयर
 header-device-firmware = डिवाइस फर्मवेयर
 header-firmware-update = फर्मवेयर अपडेट
 
-not-applicable = N/A
-
 update-available = फर्मवेयर संस्करण {$version} उपलब्ध है।
 
 update-connect-to-ac = अपने कंप्यूटर को पावर से कनेक्ट करें। फर्मवेयर अपडेट के लिए <b>USB Type-C</b> चार्जिंग समर्थित नहीं है।

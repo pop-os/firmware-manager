@@ -13,8 +13,6 @@ header-system-firmware = Micrologiciel du système
 header-device-firmware = Micrologiciel du périphérique
 header-firmware-update = Mise à jour du micrologiciel
 
-not-applicable = S.O.
-
 update-available = La version {$version} du micrologiciel est disponible.
 
 update-connect-to-ac = Connectez votre ordinateur à l'alimentation. La recharge par <b>USB Type-C</b> n'est pas prise en charge pour les mises à jour du micrologiciel.

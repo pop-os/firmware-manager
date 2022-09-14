@@ -14,8 +14,6 @@ header-system-firmware = സിസ്റ്റം ഫേംവെയർ
 header-device-firmware = ഉപകരണ ഫേംവെയർ
 header-firmware-update = ഫേംവെയർ അപ്‌ഡേറ്റ്
 
-not-applicable = ബാധകമല്ല
-
 update-available = പുതിയ ഫേംവെയർ പതിപ്പ് {$version} ലഭ്യമാണ്.
 
 update-connect-to-ac = നിങ്ങളുടെ കമ്പ്യൂട്ടർ പവറുമായി ബന്ധിപ്പിക്കുക. <b>USB Type-C</b>ഫേംവെയർ അപ്‌ഡേറ്റുകൾക്കായി ചാർജിംഗ് സപ്പോർട്ട് ചെയ്യില്ല .

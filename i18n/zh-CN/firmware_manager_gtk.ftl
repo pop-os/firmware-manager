@@ -14,8 +14,6 @@ header-system-firmware = 系统固件
 header-device-firmware = 设备固件
 header-firmware-update = 固件更新
 
-not-applicable = N/A
-
 update-available = 固件版本 {$version} 已可用。
 
 update-connect-to-ac = 将你的电脑连接到电源。不支持通过 <b>USB Type-C</b> 充电进行固件更新。
