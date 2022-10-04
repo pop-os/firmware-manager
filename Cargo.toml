@@ -9,22 +9,21 @@ members = [ "gtk", "gtk/ffi", "notify", "tools" ]
 
 [dependencies]
 better-panic = "0.3.0"
-futures = "0.3.21"
-fwupd-dbus = "0.2.2"
+futures = "0.3.24"
+fwupd-dbus = "0.2.3"
 human-sort = "0.2.2"
 log = "0.4.17"
 shrinkwraprs = "0.3.0"
 system76-firmware-daemon = { git = "https://github.com/pop-os/system76-firmware" }
-thiserror = "1.0.31"
-tokio = { version = "1.18.2", features = ["rt"] }
-tokio-udev = "0.6.0"
+thiserror = "1.0.37"
+tokio = { version = "1.21.2", features = ["rt"] }
+tokio-udev = "0.8.0"
 users = "0.11.0"
 xdg = "2.4.1"
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"
-rust-embed = "6.4.0"
-once_cell = "1.12.0"
+rust-embed = "6.4.1"
+once_cell = "1.15.0"
 slotmap = "1.0.6"
-
-# Pin dependency for Ubuntu support (Rust 1.58.0)
-dashmap = "=5.2"
+dashmap = "5.4.0"
+apply = "0.3.0"
