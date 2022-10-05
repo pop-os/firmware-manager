@@ -18,16 +18,19 @@ where
         Self: Clone,
     {
         self.connect_size_allocate(move |_, allocation| {
+            let mut width = allocation.width();
+            let mut height = allocation.height();
+
             // The parent widget has not been realized if this value is less than 2.
             // Keep the child hidden until this value is not zero.
-            if allocation.width < 2 {
+            if width < 2 {
                 other.hide();
                 return;
             }
 
             // Calculate the size of the child based on the given percentages.
-            let width = width_percent.map_or(-1, |percent| calc_side(allocation.width, percent));
-            let height = height_percent.map_or(-1, |percent| calc_side(allocation.height, percent));
+            width = width_percent.map_or(-1, |percent| calc_side(width, percent));
+            height = height_percent.map_or(-1, |percent| calc_side(height, percent));
 
             other.show();
             other.set_size_request(width, height);

@@ -343,7 +343,7 @@ fn reveal<F: FnMut() -> gtk::Container>(
                 gtk::Box::new(gtk::Orientation::Vertical, 12);
                 ..set_vexpand(true);
                 ..add(&gtk::Separator::new(gtk::Orientation::Horizontal));
-                ..add(&gtk::LabelBuilder::new().label(&format!("<b>{}</b>", fl!("changelog"))).use_markup(true).xalign(0.0).build());
+                ..add(&gtk::Label::builder().label(&format!("<b>{}</b>", fl!("changelog"))).use_markup(true).xalign(0.0).build());
                 ..add(&widget);
                 ..show_all();
             };

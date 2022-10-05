@@ -41,14 +41,14 @@ pub struct DeviceWidget {
 impl DeviceWidget {
     /// Creates a new device widget using the generic information from the firmware manager.
     pub fn new(info: &FirmwareInfo) -> Self {
-        let device = gtk::LabelBuilder::new()
+        let device = gtk::Label::builder()
             .label(info.name.as_ref())
             .xalign(0.0)
             .valign(gtk::Align::End)
             .build();
 
         let label = cascade! {
-            gtk::LabelBuilder::new()
+            gtk::Label::builder()
                 .label(info.current.as_ref())
                 .xalign(0.0)
                 .valign(gtk::Align::Start)
@@ -57,7 +57,7 @@ impl DeviceWidget {
         };
 
         let button = cascade! {
-            gtk::ButtonBuilder::new()
+            gtk::Button::builder()
                 .label(&fl!("button-update"))
                 .halign(gtk::Align::End)
                 .hexpand(true)
@@ -67,7 +67,7 @@ impl DeviceWidget {
         };
 
         let progress = cascade! {
-            gtk::ProgressBarBuilder::new()
+            gtk::ProgressBar::builder()
                 .show_text(true)
                 .pulse_step(0.1 / f64::from(info.install_duration + 1))
                 .valign(gtk::Align::Center)
@@ -76,7 +76,7 @@ impl DeviceWidget {
             ..pulse();
         };
 
-        let waiting = gtk::LabelBuilder::new().label(&fl!("action-waiting")).build();
+        let waiting = gtk::Label::builder().label(&fl!("action-waiting")).build();
 
         let stack = cascade! {
             gtk::Stack::new();
@@ -86,7 +86,7 @@ impl DeviceWidget {
             ..set_visible_child(&button);
         };
 
-        let dropdown_image = gtk::ImageBuilder::new()
+        let dropdown_image = gtk::Image::builder()
             .icon_name("pan-end-symbolic")
             .icon_size(gtk::IconSize::Menu.into())
             .halign(gtk::Align::Start)
@@ -111,13 +111,13 @@ impl DeviceWidget {
         };
 
         let event_box = cascade! {
-            gtk::EventBoxBuilder::new()
+            gtk::EventBox::builder()
                 .can_focus(false)
                 .hexpand(true)
                 .events(gdk::EventMask::BUTTON_PRESS_MASK)
                 .build();
             ..add(&cascade! {
-                gtk::GridBuilder::new()
+                gtk::Grid::builder()
                     .column_spacing(12)
                     .row_spacing(3)
                     .build();
