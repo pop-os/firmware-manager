@@ -19,7 +19,7 @@ fn main() {
     glib::set_program_name(APP_ID.into());
     gtk::init().expect("failed to init GTK");
 
-    let application = gtk::ApplicationBuilder::new().application_id(APP_ID).build();
+    let application = gtk::Application::builder().application_id(APP_ID).build();
 
     application.connect_activate(|app| {
         if let Some(window) = app.window_by_id(0) {
@@ -33,13 +33,13 @@ fn main() {
 
         let weak_widget = Rc::downgrade(&widget);
         let headerbar = cascade! {
-            gtk::HeaderBarBuilder::new()
+            gtk::HeaderBar::builder()
                 .title("Firmware Manager")
                 .show_close_button(true)
                 .build();
             ..pack_end(&cascade! {
-                gtk::ButtonBuilder::new()
-                    .image(gtk::ImageBuilder::new()
+                gtk::Button::builder()
+                    .image(gtk::Image::builder()
                         .icon_name("view-refresh-symbolic")
                         .icon_size(gtk::IconSize::SmallToolbar.into())
                         .build()
@@ -55,7 +55,7 @@ fn main() {
         };
 
         let _window = cascade! {
-            gtk::ApplicationWindowBuilder::new()
+            gtk::ApplicationWindow::builder()
                 .application(app)
                 .icon_name("firmware-manager")
                 .window_position(gtk::WindowPosition::Center)
@@ -78,7 +78,7 @@ fn main() {
                 use gdk::keys::constants as key;
                 gtk::Inhibit(match event.keyval() {
                     key::q if event.state().contains(gdk::ModifierType::CONTROL_MASK) => {
-                        let _ = window.emit_by_name("delete-event", &[&gdk::Event::new(gdk::EventType::Delete)]);
+                        let _ = window.emit_by_name::<()>("delete-event", &[&gdk::Event::new(gdk::EventType::Delete)]);
                         true
                     }
                     _ => false
@@ -94,19 +94,19 @@ fn main() {
 ///
 /// Currently the primary purpose is to determine the logging level.
 fn argument_parsing() {
-    use clap::{App, Arg};
+    use clap::{Command, Arg, ArgAction};
     use log::LevelFilter;
 
-    let matches = App::new("com.system76.FirmwareManager")
+    let matches = Command::new("com.system76.FirmwareManager")
         .arg(
-            Arg::with_name("verbose")
-                .short("v")
-                .multiple(true)
+            Arg::new("verbose")
+                .short('v')
+                .action(ArgAction::Count)
                 .help("define the logging level; multiple occurrences increases the logging level"),
         )
         .get_matches();
 
-    let logging_level = match matches.occurrences_of("verbose") {
+    let logging_level = match matches.get_count("verbose") {
         0 => LevelFilter::Info,
         1 => LevelFilter::Debug,
         _ => LevelFilter::Trace,

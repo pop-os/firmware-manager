@@ -2,11 +2,11 @@ use crate::fl;
 use gtk::prelude::*;
 
 pub fn generate_widget_none() -> gtk::Box {
-    gtk::BoxBuilder::new()
+    gtk::Box::builder()
         .margin_start(48)
         .margin_end(48)
         .child(
-            &gtk::LabelBuilder::new()
+            &gtk::Label::builder()
                 .label(&fl!("changelog-unavailable"))
                 .build()
                 .upcast::<gtk::Widget>(),
@@ -39,7 +39,7 @@ where
 
         const PADDING: i32 = 48;
 
-        let version = gtk::LabelBuilder::new()
+        let version = gtk::Label::builder()
             .label(&*format!("<b>{}</b>", version.as_ref()))
             .use_markup(true)
             .xalign(0.0)
@@ -48,7 +48,7 @@ where
             .margin_end(PADDING)
             .build();
 
-        let changelog = gtk::LabelBuilder::new()
+        let changelog = gtk::Label::builder()
             .label(&*markdown)
             .wrap(true)
             .xalign(0.0)

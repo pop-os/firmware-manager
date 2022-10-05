@@ -3,7 +3,6 @@ use glib::object::ObjectType;
 use i18n_embed::DesktopLanguageRequester;
 use std::ptr;
 
-#[no_mangle]
 pub struct S76FirmwareWidget;
 
 #[no_mangle]

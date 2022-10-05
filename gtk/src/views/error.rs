@@ -28,14 +28,14 @@ fn error_view(icon: &str, reason: &str) -> gtk::Container {
         ..set_halign(gtk::Align::Center);
         ..set_valign(gtk::Align::Center);
         ..add(
-            &gtk::ImageBuilder::new()
+            &gtk::Image::builder()
                 .icon_name(icon)
                 .icon_size(gtk::IconSize::Dialog.into())
                 .pixel_size(64)
                 .build()
         );
         ..add(&cascade! {
-            gtk::LabelBuilder::new()
+            gtk::Label::builder()
                 .label(reason)
                 .wrap(true)
                 .xalign(0.0)

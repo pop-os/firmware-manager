@@ -41,8 +41,8 @@ impl FirmwareUpdateDialog {
         let changelog_container = cascade! {
             gtk::Box::new(gtk::Orientation::Vertical, 12);
             ..set_vexpand(true);
-            ..add(&gtk::LabelBuilder::new().label(&*header).wrap(true).xalign(0.0).use_markup(true).build());
-            ..add(&gtk::LabelBuilder::new().label(&*changelog_text).use_markup(true).xalign(0.0).build());
+            ..add(&gtk::Label::builder().label(&*header).wrap(true).xalign(0.0).use_markup(true).build());
+            ..add(&gtk::Label::builder().label(&*changelog_text).use_markup(true).xalign(0.0).build());
             ..add(&changelog_entries);
             ..show_all();
         };
@@ -50,13 +50,13 @@ impl FirmwareUpdateDialog {
         let cancel = gtk::Button::with_label(&fl!("button-cancel"));
 
         let reboot = cascade! {
-            gtk::ButtonBuilder::new()
+            gtk::Button::builder()
                 .label(&fl!("button-reboot-and-install"))
                 .build();
             ..style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
         };
 
-        let dialog = gtk::DialogBuilder::new()
+        let dialog = gtk::Dialog::builder()
             .accept_focus(true)
             .use_header_bar(1)
             .deletable(true)
@@ -74,7 +74,7 @@ impl FirmwareUpdateDialog {
         cascade! {
             &headerbar;
             ..set_custom_title(
-                Some(&gtk::LabelBuilder::new()
+                Some(&gtk::Label::builder()
                     .label(&format!("<b>{}</b>", fl!("header-firmware-update")))
                     .use_markup(true)
                     .build())
@@ -90,14 +90,14 @@ impl FirmwareUpdateDialog {
             ..set_border_width(12);
             ..set_spacing(12);
             ..add(
-                &gtk::ImageBuilder::new()
+                &gtk::Image::builder()
                     .icon_name("application-x-firmware")
                     .icon_size(gtk::IconSize::Dialog.into())
                     .valign(gtk::Align::Start)
                     .build()
             );
             ..add(&cascade! {
-                gtk::ScrolledWindowBuilder::new()
+                gtk::ScrolledWindow::builder()
                     .hexpand(true)
                     .vexpand(true)
                     .build();

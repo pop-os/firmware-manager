@@ -1,5 +1,6 @@
+use apply::Apply;
 use futures::{
-    future::{ready, AbortHandle, Abortable},
+    future::{AbortHandle, Abortable},
     stream::StreamExt,
 };
 use std::thread;
@@ -17,12 +18,14 @@ pub fn usb_hotplug_event_loop<F: Fn() + Send + 'static>(func: F) -> Option<Abort
         let _ =
             tokio::runtime::Builder::new_current_thread().enable_io().build().unwrap().block_on(
                 async move {
-                    let future = MonitorBuilder::new()
+                    let _res = MonitorBuilder::new()
                         .expect("couldn't create monitor builder")
                         .match_subsystem_devtype("usb", "usb_device")
                         .expect("failed to add filter for USB devices")
                         .listen()
                         .expect("couldn't create MonitorSocket")
+                        .apply(tokio_udev::AsyncMonitorSocket::new)
+                        .expect("couldn't create AsyncMonitorSocket")
                         .for_each(move |event| {
                             if let Ok(event) = event {
                                 if let EventType::Add | EventType::Remove = event.event_type() {
@@ -30,10 +33,10 @@ pub fn usb_hotplug_event_loop<F: Fn() + Send + 'static>(func: F) -> Option<Abort
                                 }
                             }
 
-                            ready(())
-                        });
-
-                    Abortable::new(future, abort_registration).await
+                            futures::future::ready(())
+                        })
+                        .apply(|future| Abortable::new(future, abort_registration))
+                        .await;
                 },
             );
 

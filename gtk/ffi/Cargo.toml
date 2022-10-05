@@ -12,11 +12,11 @@ crate-type = [ "cdylib" ]
 cdylib-link-lines = "0.1.4"
 
 [dependencies]
-glib = "0.14.0"
-gtk-sys = "0.14.0"
-gtk = "0.14.0"
+glib = "0.15.12"
+gtk-sys = "0.15.3"
+gtk = "0.15.5"
 firmware-manager-gtk = { path = "../", default-features = false, features = [ "fwupd","system76", ] }
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"
-rust-embed = "6.4.0"
-once_cell = "1.12.0"
+rust-embed = "6.4.1"
+once_cell = "1.15.0"
