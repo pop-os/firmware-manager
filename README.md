@@ -70,7 +70,7 @@ The core is used as the foundation for the two members of this workspace: a noti
 
 The `firmware-manager` library provides functions for scanning firmware, and an event loop which receives and sends event signals through channels. One channel receives messages from the frontend, whereas the other sends messages to the frontend. This is designed to be run in a background thread in order to prevent a UI that uses the firmware manager from blocking as requests are being processed.
 
-Additionally, the event API is expected to be used with the provided `slotmap`-based entity-component architecture. This allows a frontend to assign entity IDs to their requests, and receive those entity IDs back in responses. In doing so, frontends can avoid the need for complex runtime reference-counnting, or creating reference cycles. The frontend has exclusive ownership of the data that an entity ID refers to.
+Additionally, the event API is expected to be used with the provided `slotmap`-based entity-component architecture. This allows a frontend to assign entity IDs to their requests, and receive those entity IDs back in responses. In doing so, frontends can avoid the need for complex runtime reference-counting, or creating reference cycles. The frontend has exclusive ownership of the data that an entity ID refers to.
 
 ### GTK Application / Library
 
@@ -152,7 +152,7 @@ let widget = firmware.container();
 
 ### C API
 
-The Rust library also supports C interface with FFI rules in the Makefile for gnerating a dynamic C library with `pkg-config` support. This is integrated in GNOME Settings on Pop!_OS.
+The Rust library also supports C interface with FFI rules in the Makefile for generating a dynamic C library with `pkg-config` support. This is integrated in GNOME Settings on Pop!_OS.
 
 ```sh
 make ffi prefix=/usr
