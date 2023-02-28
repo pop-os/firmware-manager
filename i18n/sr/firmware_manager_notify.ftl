@@ -1,5 +1,5 @@
-summary = Firmver ažuriranja su dostupna.
-body = Kliknite ovde da biste ih instalirali.
+summary = Фирмвер ажурирања су доступна.
+body = Кликните овде да бисте их инсталирали.
 
-error-fwupd = Greška pri ažuriranju fwupd listi
+error-fwupd = Грешка при ажурирању fwupd листи
 

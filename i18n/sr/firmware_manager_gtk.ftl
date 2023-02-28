@@ -1,30 +1,30 @@
-action-downloading = Preuzimanje
-action-scheduling = Zakazivanje
-action-flashing = Instaliranje
-action-waiting = Čekanje
+action-downloading = Преузимање
+action-scheduling = Заказивање
+action-flashing = Инсталирање
+action-waiting = Чекање
 
-button-cancel = Prekini
-button-reboot-and-install = Restartuj i instaliraj
-button-update = Ažuriraj
+button-cancel = Прекини
+button-reboot-and-install = Рестартуј и инсталирај
+button-update = Ажурирај
 
-changelog = Dnevnik promena
-changelog-unavailable = Dnevnik promena nije dostupan
+changelog = Дневник промена
+changelog-unavailable = Дневник промена није доступан
 
-header-system-firmware = Sistemski firmver
-header-device-firmware = Firmver uređaja
-header-firmware-update = Firmver ažuriranje
+header-system-firmware = Системски фирмвер
+header-device-firmware = Фирмвер уређаја
+header-firmware-update = Ажурирање фирмвера
 
-update-available = Firmver verzija {$version} je dostupna.
+update-available = Фирмвер верзија {$version} је доступна.
 
-update-connect-to-ac = Povežite Vaš računar sa izvorom napajanja. <b>USB Tip-C</b> punjenje nije podržano za firmver ažuriranja.
+update-connect-to-ac = Повежите рачунар са извором напајања. <b>USB Tip-C</b> пуњење није подржано за фирмвер ажурирања.
 
-update-guide = Nakon što se firmver ažuriranje završi, neophodno je pritisnuti dugme za paljenje više od jednog puta. Videti {$url_tag_start}ovaj pomoćni članak{$url_tag_end} za više informacija.
+update-guide = Након што се ажурирање фирмвера заврши, неопходно је притиснути дугме за паљење више од једног пута. Видети {$url_tag_start}овај помоћни чланак{$url_tag_end} за више информација.
 
-view-empty = Firmver je nedostupan
+view-empty = Фирмвер је недоступан
 
- Nema uređaja koji podržavaju automatsko ažuriranje firmvera.
+ Нема уређаја који подржавају аутоматско ажурирање фирмвера.
 
-view-permission = Potreban viši nivo ovlašćenja
+view-permission = Потребан је виши ниво овлашћења
 
- Samo nalozi administratora mogu ažurirati firmver.
+ Само налози администратора могу ажурирати фирмвер.
 
