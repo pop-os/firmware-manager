@@ -492,18 +492,18 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.2.2"
+version = "4.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b802d85aaf3a1cdb02b224ba472ebdea62014fccfcb269b95a4d76443b5ee5a"
+checksum = "956ac1f6381d8d82ab4684768f89c0ea3afe66925ceadb4eeb3fc452ffc55d62"
 dependencies = [
  "clap_builder",
 ]
 
 [[package]]
 name = "clap_builder"
-version = "4.2.2"
+version = "4.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14a1a858f532119338887a4b8e1af9c60de8249cd7bafd68036a489e261e37b6"
+checksum = "84080e799e54cff944f4b4a4b0e71630b0e0443b25b985175c7dddc1a859b749"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1042,7 +1042,7 @@ version = "0.1.4"
 dependencies = [
  "better-panic",
  "cascade",
- "clap 4.2.2",
+ "clap 4.2.4",
  "fern",
  "firmware-manager",
  "gdk",
@@ -1970,9 +1970,9 @@ dependencies = [
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f508063cc7bb32987c71511216bd5a32be15bccb6a80b52df8b9d7f01fc3aa2"
+checksum = "9b085a4f2cde5781fc4b1717f2e86c62f5cda49de7ba99a7c2eae02b61c9064c"
 
 [[package]]
 name = "locale_config"
@@ -3308,7 +3308,7 @@ dependencies = [
 [[package]]
 name = "system76-firmware"
 version = "1.0.51"
-source = "git+https://github.com/pop-os/system76-firmware#5180b1e5e1891c1a30869ad2302aa2653b106092"
+source = "git+https://github.com/pop-os/system76-firmware#c3d5323647a0853c4d28e4f7148a4a96f63dbb3a"
 dependencies = [
  "anyhow",
  "bincode",
@@ -3330,7 +3330,7 @@ dependencies = [
 [[package]]
 name = "system76-firmware-daemon"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/system76-firmware#5180b1e5e1891c1a30869ad2302aa2653b106092"
+source = "git+https://github.com/pop-os/system76-firmware#c3d5323647a0853c4d28e4f7148a4a96f63dbb3a"
 dependencies = [
  "dbus 0.9.7",
  "dbus-crossroads",
@@ -3592,7 +3592,7 @@ dependencies = [
 name = "tools"
 version = "0.1.0"
 dependencies = [
- "clap 4.2.2",
+ "clap 4.2.4",
  "freedesktop-desktop-entry",
 ]
 
