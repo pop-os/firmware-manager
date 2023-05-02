@@ -1,6 +1,6 @@
 [package]
 name = "firmware-manager-gtk"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
 edition = "2018"
 
@@ -12,8 +12,8 @@ system76 = []
 [dependencies]
 better-panic = "0.3.0"
 cascade = "1.0.1"
-clap = "4.0.9"
-fern = "0.6.1"
+clap = "4.2.5"
+fern = "0.6.2"
 firmware-manager = { path = "../" }
 gdk = "0.15.4"
 gio = "0.15.12"
@@ -24,8 +24,8 @@ log = "0.4.17"
 shrinkwraprs = "0.3.0"
 upower_dbus = "0.1.0"
 yansi = "0.5.1"
-i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
-i18n-embed-fl = "0.6.4"
-rust-embed = "6.4.1"
-once_cell = "1.15.0"
+i18n-embed = { version = "0.13.8", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.6.6"
+rust-embed = "6.6.1"
+once_cell = "1.17.1"
 slotmap = "1.0.6"
