@@ -76,7 +76,7 @@ bin-notify $(NOTBINARY): $(STARTUP_DESKTOP) vendor-extract
 ## Builds the desktop entry in the target directory.
 
 desktop $(DESKTOP): vendor-extract
-	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
+	@cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(APPID) \
 		--name "Firmware Manager" \
 		--icon firmware-manager \
@@ -92,7 +92,7 @@ desktop $(DESKTOP): vendor-extract
 		--startup-notify
 
 notify-desktop $(STARTUP_DESKTOP): vendor-extract
-	cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
+	@cargo run -p tools --bin desktop-entry $(DESKTOP_ARGS) -- \
 		--appid $(NOTIFY_APPID) \
 		--name "Firmware Manager Check" \
 		--icon firmware-manager \
