@@ -29,7 +29,7 @@ where
         let markdown = if entry.as_ref().is_empty() {
             fl!("changelog-unavailable")
         } else {
-            html2runes::markdown::convert_string(entry.as_ref()).trim().to_string()
+            html2md::parse_html(entry.as_ref()).trim().to_string()
         };
 
         // NOTE: If we don't set a max width in chars, the label resizes its parent.
