@@ -12,6 +12,7 @@ system76 = []
 [dependencies]
 better-panic = "0.3.0"
 cascade = "1.0.1"
+chrono = "0.4"
 clap = "4.2.5"
 fern = "0.6.2"
 firmware-manager = { path = "../" }

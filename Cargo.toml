@@ -10,7 +10,7 @@ members = [ "gtk", "gtk/ffi", "notify", "tools" ]
 [dependencies]
 better-panic = "0.3.0"
 futures = "0.3.28"
-fwupd-dbus = "0.2.3"
+fwupd-dbus = "0.3.0"
 human-sort = "0.2.2"
 log = "0.4.17"
 shrinkwraprs = "0.3.0"
