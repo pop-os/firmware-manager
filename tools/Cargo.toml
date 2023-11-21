@@ -2,7 +2,7 @@
 name = "tools"
 version = "0.1.0"
 authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
-edition = "2018"
+edition = "2021"
 description = "build tools used by this project"
 
 [[bin]]

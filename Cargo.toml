@@ -2,7 +2,7 @@
 name = "firmware-manager"
 version = "0.1.5"
 authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
-edition = "2018"
+edition = "2021"
 
 [workspace]
 members = [ "gtk", "gtk/ffi", "notify", "tools" ]
