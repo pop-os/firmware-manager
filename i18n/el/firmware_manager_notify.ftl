@@ -1,4 +1,4 @@
-summary = Firmware updates are available.
-body = Click here to install them.
+summary = Υπάρχουν διαθέσιμες ενημερώσεις υλικολογισμικού.
+body = Πατήστε εδώ για να τις εγκαταστήσετε.
 
-error-fwupd = Failed to update fwupd remotes
+error-fwupd = Αποτυχία ενημέρωσης fwupd remotes
