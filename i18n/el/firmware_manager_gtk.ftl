@@ -1,20 +1,20 @@
-action-downloading = Downloading
+action-downloading = Γίνεται λήψη
 action-scheduling = Scheduling
 action-flashing = Flashing
-action-waiting = Waiting
+action-waiting = Σε αναμονή
 
-button-cancel = Cancel
-button-reboot-and-install = Reboot and Install
-button-update = Update
+button-cancel = Ακύρωση
+button-reboot-and-install = Επανεκκίνηση και Εγκατάσταση
+button-update = Ενημέρωση
 
 changelog = Changelog
 changelog-unavailable = No changelog available
 
-header-system-firmware = System Firmware
-header-device-firmware = Device Firmware
-header-firmware-update = Firmware Update
+header-system-firmware = Υλικολογισμικό Συστήματος
+header-device-firmware = Υλικολογισμικό Συσκευής
+header-firmware-update = Ενημέρωση Υλικολογισμικού
 
-update-available = Firmware version {$version} is available.
+update-available = Η έκδοση υλικολογισμικού {$version} είναι διαθέσιμη.
 
 update-connect-to-ac = Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.
 
@@ -22,7 +22,7 @@ update-guide = After the firmware update is complete, it may be necessary to pre
 
 view-empty = Managed Firmware Unavailable
 
- No devices supporting automatic firmware updates detected.
+ Δεν εντοπίστηκαν συσκευές που να υποστηρίζουν την αυτόματη ενημέρωση υλικολογισμικού.
 
 view-permission = Permission Required
 
