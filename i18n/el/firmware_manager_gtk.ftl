@@ -1,5 +1,5 @@
 action-downloading = Γίνεται λήψη
-action-scheduling = Scheduling
+action-scheduling = Προγραμματισμός
 action-flashing = Flashing
 action-waiting = Σε αναμονή
 
@@ -7,8 +7,8 @@ button-cancel = Ακύρωση
 button-reboot-and-install = Επανεκκίνηση και Εγκατάσταση
 button-update = Ενημέρωση
 
-changelog = Changelog
-changelog-unavailable = No changelog available
+changelog = Λίστα Αλλαγών
+changelog-unavailable = Δεν υπάρχει διαθέσιμη λίστα αλλαγών
 
 header-system-firmware = Υλικολογισμικό Συστήματος
 header-device-firmware = Υλικολογισμικό Συσκευής
