@@ -1,6 +1,6 @@
 action-downloading = Γίνεται λήψη
 action-scheduling = Προγραμματισμός
-action-flashing = Flashing
+action-flashing = Αναβάθμιση
 action-waiting = Σε αναμονή
 
 button-cancel = Ακύρωση
@@ -16,9 +16,9 @@ header-firmware-update = Ενημέρωση Υλικολογισμικού
 
 update-available = Η έκδοση υλικολογισμικού {$version} είναι διαθέσιμη.
 
-update-connect-to-ac = Connect your computer to power. <b>USB Type-C</b> charging is not supported for firmware updates.
+update-connect-to-ac = Φορτίστε τη συσκευή σας. Η φόρτιση με σύνδεση <b>USB Type-C</b> δεν υποστηρίζεται για την ενημέρωση υλικολογισμικού.
 
-update-guide = After the firmware update is complete, it may be necessary to press the power button more than once. See {$url_tag_start}this support article{$url_tag_end} for more information.
+update-guide = Μετά την ολοκλήρωση της ενημέρωσης του υλικολογισμικού, μπορεί να χρειαστεί να πιέσετε το power button περισσότερες απο μία φορές. See {$url_tag_start}this support article{$url_tag_end} for more information.
 
 view-empty = Managed Firmware Unavailable
 
@@ -26,4 +26,4 @@ view-empty = Managed Firmware Unavailable
 
 view-permission = Permission Required
 
- Only administrator accounts may update firmware.
+ Μόνο οι λογαριασμοί διαχειριστή μπορούν να προβούν σε ενημέρωση υλικολογισμικού.
