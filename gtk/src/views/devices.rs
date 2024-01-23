@@ -49,7 +49,7 @@ impl DevicesView {
                     .and_then(|w| w.children().into_iter().next());
 
                 if let Some(widget) = widget {
-                    let _ = widget.emit_by_name::<()>("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
+                    let _ = widget.emit_by_name::<bool>("button_press_event", &[&gdk::Event::new(gdk::EventType::ButtonPress)]);
                 }
             });
             ..connect_key_press_event(move |listbox, event| {
