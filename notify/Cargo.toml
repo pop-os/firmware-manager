@@ -13,9 +13,9 @@ fwupd = []
 fomat-macros = "0.3.2"
 
 [dependencies]
-notify-rust = { version = "4.8.0", default-features = false, features = ["dbus"] }
 firmware-manager = { path = "../" }
-i18n-embed = { version = "0.13.8", features = ["fluent-system", "desktop-requester"] }
-i18n-embed-fl = "0.6.6"
-rust-embed = "6.6.1"
-once_cell = "1.17.1"
+i18n-embed = { version = "0.14.1", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.7.0"
+notify-rust = { version = "4.10.0", default-features = false, features = ["dbus"] }
+once_cell = "1.19.0"
+rust-embed = "8.0.0"
