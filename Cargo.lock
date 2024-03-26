@@ -1696,7 +1696,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.5",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3170,8 +3170,8 @@ dependencies = [
 
 [[package]]
 name = "system76-firmware"
-version = "1.0.58"
-source = "git+https://github.com/pop-os/system76-firmware#b64262e187687616efde9eb97f5680a5b041b075"
+version = "1.0.60"
+source = "git+https://github.com/pop-os/system76-firmware#be0e0f7e7f215fad41a805296a1510225e541282"
 dependencies = [
  "anyhow",
  "bincode",
@@ -3193,7 +3193,7 @@ dependencies = [
 [[package]]
 name = "system76-firmware-daemon"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/system76-firmware#b64262e187687616efde9eb97f5680a5b041b075"
+source = "git+https://github.com/pop-os/system76-firmware#be0e0f7e7f215fad41a805296a1510225e541282"
 dependencies = [
  "dbus 0.9.7",
  "dbus-crossroads",
