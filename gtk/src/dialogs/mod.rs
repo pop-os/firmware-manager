@@ -15,7 +15,7 @@ use gtk::prelude::*;
 pub struct FirmwareUpdateDialog(gtk::Dialog);
 
 impl FirmwareUpdateDialog {
-    pub fn new<S: AsRef<str>, I: Iterator<Item = (S, S, S)>>(
+    pub fn new<S: AsRef<str>, I: Iterator<Item = (S, u64, S)>>(
         version: &str,
         changelog: I,
         has_battery: bool,

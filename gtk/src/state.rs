@@ -4,6 +4,7 @@ use firmware_manager::*;
 use gtk::prelude::*;
 use slotmap::{DefaultKey as Entity, SecondaryMap, SparseSecondaryMap};
 use std::sync::mpsc::Sender;
+use chrono::NaiveDateTime;
 
 /// Manages all state and state interactions with the UI.
 pub(crate) struct State {
@@ -176,8 +177,7 @@ impl State {
                 let log_entries = releases
                     .iter()
                     .rev()
-                    // TODO: Add release date
-                    .map(|release| (release.version.as_ref(), "", release.description.as_ref()));
+                    .map(|release| (release.version.as_ref(), release.created, release.description.as_ref()));
 
                 crate::changelog::generate_widget(log_entries).upcast::<gtk::Container>()
             });
@@ -188,9 +188,14 @@ impl State {
         if let Some((_, changelog)) = self.components.system76.get(entity) {
             reveal(revealer, &sender, entity, || {
                 let log_entries = changelog.versions.iter().map(|version| {
+                    let dt = format!("{} 00:00:00", version.date);
+                    let date = NaiveDateTime::parse_from_str(&dt, "%Y-%m-%d %H:%M:%S")
+                        .unwrap_or_default()
+                        .timestamp();
+
                     (
                         version.bios.as_ref(),
-                        version.date.as_ref(),
+                        date as u64,
                         version.description.as_ref(),
                     )
                 });

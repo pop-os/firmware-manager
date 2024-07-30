@@ -22,8 +22,7 @@ impl<'a> FwupdDialog<'a> {
             .releases
             .iter()
             .rev()
-            // TODO: Add release date
-            .map(|release| (release.version.as_ref(), "", release.description.as_ref()));
+            .map(|release| (release.version.as_ref(), release.created, release.description.as_ref()));
 
         let response = if self.needs_reboot {
             let dialog = FirmwareUpdateDialog::new(self.latest, log_entries, self.has_battery);
