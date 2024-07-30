@@ -1,5 +1,6 @@
 use crate::fl;
 use gtk::prelude::*;
+use chrono::{LocalResult, TimeZone, Utc};
 
 pub fn generate_widget_none() -> gtk::Box {
     gtk::Box::builder()
@@ -17,7 +18,7 @@ pub fn generate_widget_none() -> gtk::Box {
 pub fn generate_widget<I, S>(changelog: I) -> gtk::Box
 where
     S: AsRef<str>,
-    I: Iterator<Item = (S, S, S)>,
+    I: Iterator<Item = (S, u64, S)>,
 {
     let changelog_entries = cascade! {
         gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -38,10 +39,11 @@ where
 
         const PADDING: i32 = 48;
 
-        let version_label = if !date.as_ref().is_empty() {
-            format!("<b>{}</b> ({})", version.as_ref(), date.as_ref())
-        } else {
-            format!("<b>{}</b>", version.as_ref())
+        let version_label = match Utc.timestamp_opt(date as i64, 0) {
+            LocalResult::Single(dt) => {
+                format!("<b>{}</b> ({})", version.as_ref(), dt.format("%Y-%m-%d"))
+            }
+            _ => format!("<b>{}</b>", version.as_ref()),
         };
 
         let version = gtk::Label::builder()
