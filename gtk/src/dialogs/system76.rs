@@ -3,6 +3,7 @@ use crate::widgets::DeviceWidget;
 use firmware_manager::{Entity, FirmwareEvent, System76Changelog, System76Digest};
 use gtk::prelude::*;
 use std::sync::mpsc::Sender;
+use chrono::NaiveDateTime;
 
 /// An instance of the firmware update dialog specific to system76-managed system devices.
 pub struct System76Dialog<'a> {
@@ -18,7 +19,11 @@ pub struct System76Dialog<'a> {
 impl<'a> System76Dialog<'a> {
     pub fn run(self) {
         let log_entries = self.changelog.versions.iter().map(|version| {
-            (version.bios.as_ref(), version.date.as_ref(), version.description.as_ref())
+            let date = NaiveDateTime::parse_from_str(&version.date, "%Y-%m-%d")
+                .unwrap_or_default()
+                .timestamp();
+
+            (version.bios.as_ref(), date as u64, version.description.as_ref())
         });
 
         let dialog = FirmwareUpdateDialog::new(self.latest, log_entries, self.has_battery);
