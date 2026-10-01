@@ -1,8 +1,10 @@
 //! Functions specific to working with fwupd firmware.
 
 use crate::{FirmwareInfo, FirmwareSignal};
-use fwupd_dbus::{Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease};
-use std::{cmp::Ordering, sync::mpsc::Sender};
+use fwupd_dbus::{
+    Client as FwupdClient, Device as FwupdDevice, Release as FwupdRelease, ReleaseFlags,
+};
+use std::sync::mpsc::Sender;
 
 /// A signal sent when a fwupd-compatible device has been discovered.
 #[derive(Debug)]
@@ -48,9 +50,11 @@ pub fn fwupd_scan(fwupd: &FwupdClient, sender: Sender<FirmwareSignal>) {
             };
 
             let latest = releases.iter().last();
-            let upgradeable = latest.map_or(false, |latest| {
-                is_newer(&device.version, &latest.version)
-            });
+            // fwupd compares versions using the device's version format, so trust its
+            // verdict; string comparison breaks when the device and release disagree on
+            // zero-padding (e.g. `1.37.0.0` vs `01.37.00.00`).
+            let upgradeable =
+                releases.iter().any(|release| release.flags.contains(ReleaseFlags::IS_UPGRADE));
             let install_duration = latest.map_or(0, |latest| {
                 latest.install_duration
             });
@@ -104,20 +108,4 @@ pub fn fwupd_updates(client: &FwupdClient) -> Result<(), fwupd_dbus::Error> {
     }
 
     Ok(())
-}
-
-// Returns `true` if the `latest` string is a newer version than the `current` string.
-fn is_newer(current: &str, latest: &str) -> bool {
-    human_sort::compare(current, latest) == Ordering::Less
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    pub fn is_newer() {
-        assert!(super::is_newer("0.2.8", "0.2.11"));
-        assert!(!super::is_newer("0.2.11", "0.2.8"));
-        assert!(super::is_newer("0.2.7", "0.2.8"));
-        assert!(!super::is_newer("0.2.8", "0.2.7"));
-    }
 }
