@@ -9,7 +9,7 @@ name = "firmware_manager"
 crate-type = [ "cdylib" ]
 
 [build-dependencies]
-cdylib-link-lines = "0.1.4"
+cdylib-link-lines = "0.1.5"
 
 [dependencies]
 firmware-manager-gtk = { path = "../", default-features = false, features = [ "fwupd","system76", ] }
@@ -18,5 +18,5 @@ gtk = "0.15.5"
 gtk-sys = "0.15.3"
 i18n-embed = { version = "0.14.1", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.7.0"
-once_cell = "1.19.0"
-rust-embed = "8.0.0"
+once_cell = "1.21.4"
+rust-embed = "8.12.0"
