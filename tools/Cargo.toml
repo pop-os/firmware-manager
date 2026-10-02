@@ -14,5 +14,5 @@ name = "pkgconfig"
 path = "src/pkgconfig.rs"
 
 [dependencies]
-clap = "4.4.18"
+clap = "4.6.7"
 freedesktop-desktop-entry = "0.1.1"
